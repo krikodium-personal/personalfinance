@@ -1,6 +1,6 @@
 export type TxType = 'expense' | 'income';
 export type Currency = 'ARS' | 'USD';
-export type TabId = 'home' | 'summary' | 'budget';
+export type TabId = 'home' | 'summary' | 'budget' | 'converter';
 
 export interface Transaction {
   id: string;

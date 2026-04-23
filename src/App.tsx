@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AddModal } from './components/AddModal';
 import { AuthScreen } from './components/AuthScreen';
 import { BudgetTab } from './components/BudgetTab';
+import { ConverterTab } from './components/ConverterTab';
 import { HomeTab } from './components/HomeTab';
 import { SummaryTab } from './components/SummaryTab';
 import { TweaksPanel } from './components/TweaksPanel';
@@ -181,6 +182,7 @@ export default function App() {
           {tab === 'home' && <HomeTab transactions={transactions} loading={loading} t={t} accent={accent} radius={radius} onDelete={deleteTransaction} />}
           {tab === 'summary' && <SummaryTab transactions={transactions} t={t} accent={accent} radius={radius} />}
           {tab === 'budget' && <BudgetTab transactions={transactions} budgets={budgets} onSaveBudget={saveBudget} t={t} accent={accent} radius={radius} />}
+          {tab === 'converter' && <ConverterTab t={t} accent={accent} radius={radius} />}
         </div>
 
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 20 }}>
@@ -188,6 +190,7 @@ export default function App() {
             <button onClick={() => setTab('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'home' ? accent : t.textSecondary }}><Icon name="home" size={22} /></button>
             <button onClick={() => setTab('summary')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'summary' ? accent : t.textSecondary }}><Icon name="chart" size={22} /></button>
             <button onClick={() => setTab('budget')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'budget' ? accent : t.textSecondary }}><Icon name="wallet" size={22} /></button>
+            <button onClick={() => setTab('converter')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'converter' ? accent : t.textSecondary }}><Icon name="exchange" size={22} /></button>
           </div>
         </div>
 
