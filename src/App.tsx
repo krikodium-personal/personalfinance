@@ -82,8 +82,8 @@ export default function App() {
     }
   }, [user, loadTransactions, loadBudgets]);
 
-  const addTransaction = async (tx: Omit<Transaction, 'id'>) => {
-    if (!user) return;
+  const addTransaction = async (tx: Omit<Transaction, 'id'>): Promise<{ ok: boolean; error?: string }> => {
+    if (!user) return { ok: false, error: 'Sesión inválida. Volvé a iniciar sesión.' };
     const { data, error } = await supabase
       .from('transactions')
       .insert([
@@ -102,11 +102,12 @@ export default function App() {
 
     if (error) {
       showToast(`Error al guardar: ${error.message}`, 'error');
-      return;
+      return { ok: false, error: error.message };
     }
 
     setTransactions(prev => [rowToTx(data), ...prev]);
     showToast('Transacción guardada ✓');
+    return { ok: true };
   };
 
   const deleteTransaction = async (id: string) => {
