@@ -23,8 +23,11 @@ export function BudgetTab({ transactions, budgets, onSaveBudget, t, accent, radi
   });
 
   const handleSave = async (catId: string) => {
-    const val = parseFloat(editVal);
-    if (!Number.isNaN(val) && val >= 0) await onSaveBudget(catId, val);
+    const raw = editVal.trim();
+    const val = raw === '' ? 0 : parseFloat(raw.replace(/\./g, '').replace(',', '.'));
+    if (!Number.isNaN(val) && val >= 0) {
+      await onSaveBudget(catId, val);
+    }
     setEditing(null);
   };
 
