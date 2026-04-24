@@ -52,23 +52,29 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
     <div style={{ padding: '0 16px' }}>
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '16px 0' }}>
         {MONTHS.map((m, i) => (
-          <button
-            key={m}
-            onClick={() => setFilterMonth(i)}
-            style={{
-              flexShrink: 0,
-              padding: '6px 14px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: 500,
-              borderRadius: 20,
-              background: filterMonth === i ? accent : t.inputBg,
-              color: filterMonth === i ? '#fff' : t.textSecondary,
-            }}
-          >
-            {m}
-          </button>
+          (() => {
+            const isSelected = filterMonth === i;
+            const isCurrentMonth = i === now.getMonth();
+            return (
+              <button
+                key={m}
+                onClick={() => setFilterMonth(i)}
+                style={{
+                  flexShrink: 0,
+                  padding: '6px 14px',
+                  border: isCurrentMonth && !isSelected ? `1px solid ${accent}` : 'none',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: isCurrentMonth ? 700 : 500,
+                  borderRadius: 20,
+                  background: isSelected ? accent : isCurrentMonth ? `${accent}1a` : t.inputBg,
+                  color: isSelected ? '#fff' : isCurrentMonth ? accent : t.textSecondary,
+                }}
+              >
+                {m}
+              </button>
+            );
+          })()
         ))}
       </div>
 
