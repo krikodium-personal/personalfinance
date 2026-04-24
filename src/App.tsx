@@ -183,8 +183,8 @@ export default function App() {
         </div>
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: 120 }}>
-          {tab === 'home' && <HomeTab transactions={transactions} loading={loading} t={t} accent={accent} radius={radius} onDelete={deleteTransaction} />}
-          {tab === 'summary' && <SummaryTab transactions={transactions} t={t} accent={accent} radius={radius} />}
+          {tab === 'home' && <HomeTab transactions={transactions} categories={categories} loading={loading} t={t} accent={accent} radius={radius} onDelete={deleteTransaction} />}
+          {tab === 'summary' && <SummaryTab transactions={transactions} categories={categories} t={t} accent={accent} radius={radius} />}
           {tab === 'budget' && (
             <BudgetTab
               transactions={transactions}

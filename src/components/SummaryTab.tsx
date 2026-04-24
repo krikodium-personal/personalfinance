@@ -1,16 +1,17 @@
-import { CATEGORIES, MONTHS } from '../constants';
-import type { ThemePalette, Transaction } from '../types';
+import { MONTHS } from '../constants';
+import type { Category, ThemePalette, Transaction } from '../types';
 import { fmt } from '../utils';
 import { BarChart, DonutChart } from './ui';
 
 interface SummaryTabProps {
   transactions: Transaction[];
+  categories: Category[];
   t: ThemePalette;
   accent: string;
   radius: number;
 }
 
-export function SummaryTab({ transactions, t, accent, radius }: SummaryTabProps) {
+export function SummaryTab({ transactions, categories, t, accent, radius }: SummaryTabProps) {
   const now = new Date();
   const monthlyData = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
@@ -30,7 +31,7 @@ export function SummaryTab({ transactions, t, accent, radius }: SummaryTabProps)
     return tx.type === 'expense' && tx.currency !== 'USD' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
 
-  const byCat = CATEGORIES.map(c => ({
+  const byCat = categories.map(c => ({
     label: c.label,
     color: c.color,
     value: curMonth.filter(tx => tx.category === c.id).reduce((s, tx) => s + tx.amount, 0),

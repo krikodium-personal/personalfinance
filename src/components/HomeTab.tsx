@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { MONTHS } from '../constants';
-import type { ThemePalette, Transaction } from '../types';
-import { fmt, getCat } from '../utils';
+import type { Category, ThemePalette, Transaction } from '../types';
+import { fmt } from '../utils';
 import { Icon, Spinner } from './ui';
 
 interface HomeTabProps {
   transactions: Transaction[];
+  categories: Category[];
   loading: boolean;
   t: ThemePalette;
   accent: string;
@@ -13,7 +14,9 @@ interface HomeTabProps {
   onDelete: (id: string) => void;
 }
 
-export function HomeTab({ transactions, loading, t, accent, radius, onDelete }: HomeTabProps) {
+const fallbackCategory: Category = { id: 'other', label: 'Otras', icon: '📦', color: '#a0a0a0' };
+
+export function HomeTab({ transactions, categories, loading, t, accent, radius, onDelete }: HomeTabProps) {
   const now = new Date();
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [balanceView, setBalanceView] = useState<'monthly' | 'annual'>('monthly');
@@ -159,7 +162,7 @@ export function HomeTab({ transactions, loading, t, accent, radius, onDelete }: 
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {sorted.map(tx => {
-          const cat = getCat(tx.category);
+          const cat = categories.find(category => category.id === tx.category) || fallbackCategory;
           const d = new Date(tx.date);
 
           return (
