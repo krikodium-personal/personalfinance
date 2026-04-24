@@ -30,7 +30,15 @@ export function Toast({ message, type, t }: { message: string; type: 'info' | 'e
 export function DonutChart({ data, size = 160 }: { data: Array<{ value: number; color: string }>; size?: number }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (!total) return <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: 13 }}>Sin datos</div>;
-  const r = 56;
+  const r = size * 0.33;
+  const stroke = Math.max(16, size * 0.12);
+  const totalLabel = fmt(total);
+  const innerDiameter = (r - stroke / 2) * 2;
+  const estimatedCharWidth = 0.56;
+  const maxAmountFont = size * 0.1;
+  const minAmountFont = 14;
+  const fittedAmountFont = innerDiameter / Math.max(totalLabel.length * estimatedCharWidth, 1);
+  const amountFontSize = Math.max(minAmountFont, Math.min(maxAmountFont, fittedAmountFont));
   const cx = size / 2;
   const cy = size / 2;
   const circumference = 2 * Math.PI * r;
@@ -44,10 +52,10 @@ export function DonutChart({ data, size = 160 }: { data: Array<{ value: number; 
   });
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e8e3dd" strokeWidth="20" />
-      {slices.map((s, i) => <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth="20" strokeDasharray={`${s.dash} ${circumference - s.dash}`} strokeDashoffset={s.offset} strokeLinecap="round" style={{ transform: 'rotate(-90deg)', transformOrigin: `${cx}px ${cy}px` }} />)}
-      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="11" fill="#6b6560">Total</text>
-      <text x={cx} y={cy + 12} textAnchor="middle" fontSize="15" fontWeight="600" fill="#1a1714">{fmt(total)}</text>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e8e3dd" strokeWidth={stroke} />
+      {slices.map((s, i) => <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={stroke} strokeDasharray={`${s.dash} ${circumference - s.dash}`} strokeDashoffset={s.offset} strokeLinecap="round" style={{ transform: 'rotate(-90deg)', transformOrigin: `${cx}px ${cy}px` }} />)}
+      <text x={cx} y={cy - size * 0.04} textAnchor="middle" fontSize={size * 0.07} fill="#6b6560">Total</text>
+      <text x={cx} y={cy + size * 0.08} textAnchor="middle" fontSize={amountFontSize} fontWeight="600" fill="#1a1714">{totalLabel}</text>
     </svg>
   );
 }
