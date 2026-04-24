@@ -33,6 +33,7 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
 
   const [renameModalCategoryId, setRenameModalCategoryId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [renameIconValue, setRenameIconValue] = useState('');
   const [deleteModalCategoryId, setDeleteModalCategoryId] = useState<string | null>(null);
 
   const currentExpenses = transactions.filter(tx => {
@@ -60,11 +61,17 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
 
   const handleRenameCategory = (catId: string) => {
     const nextLabel = renameValue.trim();
+    const nextIcon = renameIconValue.trim();
     if (!nextLabel) return;
 
-    setCategories(prev => prev.map(category => (category.id === catId ? { ...category, label: nextLabel } : category)));
+    setCategories(prev =>
+      prev.map(category =>
+        category.id === catId ? { ...category, label: nextLabel, icon: nextIcon || category.icon } : category,
+      ),
+    );
     setRenameModalCategoryId(null);
     setRenameValue('');
+    setRenameIconValue('');
   };
 
   const handleCreateCategory = () => {
@@ -164,6 +171,7 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
                       onClick={() => {
                         setRenameModalCategoryId(category.id);
                         setRenameValue(category.label);
+                        setRenameIconValue(category.icon);
                       }}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textSecondary, padding: 0, display: 'flex' }}
                       aria-label={`Editar categoría ${category.label}`}
@@ -197,13 +205,21 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
           <div style={{ width: '100%', maxWidth: 360, margin: '0 16px', background: t.card, borderRadius: radius * 0.75, padding: 16 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: t.text, marginBottom: 10 }}>Editar categoría</div>
-            <input
-              autoFocus
-              value={renameValue}
-              onChange={event => setRenameValue(event.target.value)}
-              onKeyDown={event => event.key === 'Enter' && handleRenameCategory(renameTarget.id)}
-              style={{ width: '100%', fontSize: 14, padding: '8px 10px', border: `1px solid ${t.border}`, borderRadius: 8, background: t.inputBg, color: t.text, marginBottom: 12, outline: 'none' }}
-            />
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <input
+                autoFocus
+                value={renameIconValue}
+                onChange={event => setRenameIconValue(event.target.value)}
+                placeholder="📁"
+                style={{ width: 54, fontSize: 18, textAlign: 'center', padding: '8px 4px', border: `1px solid ${t.border}`, borderRadius: 8, background: t.inputBg, color: t.text, outline: 'none' }}
+              />
+              <input
+                value={renameValue}
+                onChange={event => setRenameValue(event.target.value)}
+                onKeyDown={event => event.key === 'Enter' && handleRenameCategory(renameTarget.id)}
+                style={{ flex: 1, fontSize: 14, padding: '8px 10px', border: `1px solid ${t.border}`, borderRadius: 8, background: t.inputBg, color: t.text, outline: 'none' }}
+              />
+            </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button onClick={() => setRenameModalCategoryId(null)} style={{ border: 'none', background: t.inputBg, color: t.textSecondary, borderRadius: 8, padding: '7px 12px', cursor: 'pointer' }}>
                 Cancelar
