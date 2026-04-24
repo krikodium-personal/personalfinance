@@ -121,34 +121,34 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
           <div style={{ display: 'flex', gap: 16 }}>
           <div style={{ minWidth: 130 }}>
             <div style={{ fontSize: 11, color: t.textSecondary }}>↑ ARS Ingresos</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{fmt(arsIncome, 'ARS')}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: t.text }}>{fmt(arsIncome, 'ARS')}</div>
           </div>
           <div style={{ width: 1, background: t.border }} />
           <div style={{ minWidth: 130 }}>
             <div style={{ fontSize: 11, color: t.textSecondary }}>↓ ARS Gastos</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{fmt(arsExpense, 'ARS')}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: t.text }}>{fmt(arsExpense, 'ARS')}</div>
           </div>
           <div style={{ width: 1, background: t.border }} />
           <div style={{ minWidth: 130 }}>
             <div style={{ fontSize: 11, color: t.textSecondary }}>= ARS Saldo</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: arsNet >= 0 ? accent : '#dc2626' }}>{fmt(arsNet, 'ARS')}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: arsNet >= 0 ? accent : '#dc2626' }}>{fmt(arsNet, 'ARS')}</div>
           </div>
         </div>
           <div style={{ height: 1, background: t.border, margin: '12px 0' }} />
           <div style={{ display: 'flex', gap: 16 }}>
           <div style={{ minWidth: 130 }}>
             <div style={{ fontSize: 11, color: t.textSecondary }}>↑ USD Ingresos</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{fmt(usdIncome, 'USD')}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: t.text }}>{fmt(usdIncome, 'USD')}</div>
           </div>
           <div style={{ width: 1, background: t.border }} />
           <div style={{ minWidth: 130 }}>
             <div style={{ fontSize: 11, color: t.textSecondary }}>↓ USD Gastos</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{fmt(usdExpense, 'USD')}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: t.text }}>{fmt(usdExpense, 'USD')}</div>
           </div>
           <div style={{ width: 1, background: t.border }} />
           <div style={{ minWidth: 130 }}>
             <div style={{ fontSize: 11, color: t.textSecondary }}>= USD Saldo</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: usdNet >= 0 ? accent : '#dc2626' }}>{fmt(usdNet, 'USD')}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: usdNet >= 0 ? accent : '#dc2626' }}>{fmt(usdNet, 'USD')}</div>
           </div>
         </div>
         </div>
@@ -191,8 +191,9 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 500, color: t.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx.desc}</div>
-                <div style={{ fontSize: 12, color: t.textSecondary, marginTop: 2 }}>
-                  {tx.type === 'income' ? 'Ingreso' : cat.label} · {d.getDate()} {MONTHS[d.getMonth()]}
+                <div style={{ marginTop: 2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{tx.type === 'income' ? 'Ingreso' : cat.label}</span>
+                  <span style={{ fontSize: 12, color: t.textSecondary }}>· {d.getDate()} {MONTHS[d.getMonth()]}</span>
                 </div>
               </div>
 

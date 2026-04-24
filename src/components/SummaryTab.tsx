@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MONTHS } from '../constants';
 import type { Category, ThemePalette, Transaction } from '../types';
 import { fmt } from '../utils';
@@ -23,12 +24,16 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
       label: MONTHS[d.getMonth()],
       expense: txs.filter(tx => tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0),
       current: d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(),
+      month: d.getMonth(),
+      year: d.getFullYear(),
     };
   });
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(5);
+  const selectedMonthData = monthlyData[selectedMonthIndex] || monthlyData[monthlyData.length - 1];
 
   const curMonth = transactions.filter(tx => {
     const d = new Date(tx.date);
-    return tx.type === 'expense' && tx.currency !== 'USD' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    return tx.type === 'expense' && tx.currency !== 'USD' && d.getMonth() === selectedMonthData.month && d.getFullYear() === selectedMonthData.year;
   });
 
   const byCat = categories.map(c => ({
@@ -37,5 +42,5 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
     value: curMonth.filter(tx => tx.category === c.id).reduce((s, tx) => s + tx.amount, 0),
   })).filter(d => d.value > 0);
 
-  return <div style={{ padding: '16px 16px 0' }}><div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 12 }}>GASTOS ARS — ÚLTIMOS 6 MESES</div><div style={{ background: t.card, borderRadius: radius, padding: 20, marginBottom: 16 }}><BarChart monthlyData={monthlyData} accent={accent} /></div><div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 12 }}>DISTRIBUCIÓN ESTE MES</div><div style={{ background: t.card, borderRadius: radius, padding: 20, marginBottom: 16, display: 'flex', gap: 20, alignItems: 'center' }}><DonutChart data={byCat} size={160} /><div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>{byCat.slice(0, 5).map(d => <div key={d.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 8, height: 8, borderRadius: 4, background: d.color }} /><span style={{ fontSize: 12, color: t.textSecondary, flex: 1 }}>{d.label}</span><span style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{fmt(d.value)}</span></div>)}{byCat.length > 5 && <span style={{ fontSize: 11, color: t.textSecondary }}>+{byCat.length - 5} más</span>}{byCat.length === 0 && <span style={{ fontSize: 12, color: t.textSecondary }}>Sin datos</span>}</div></div></div>;
+  return <div style={{ padding: '16px 16px 0' }}><div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 12 }}>GASTOS ARS — ÚLTIMOS 6 MESES</div><div style={{ background: t.card, borderRadius: radius, padding: 20, marginBottom: 16 }}><BarChart monthlyData={monthlyData} accent={accent} selectedIndex={selectedMonthIndex} onSelect={setSelectedMonthIndex} /></div><div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 12 }}>{`DISTRIBUCIÓN ${selectedMonthData.label.toUpperCase()} ${selectedMonthData.year}`}</div><div style={{ background: t.card, borderRadius: radius, padding: 20, marginBottom: 16, display: 'flex', gap: 20, alignItems: 'center' }}><DonutChart data={byCat} size={160} /><div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>{byCat.slice(0, 5).map(d => <div key={d.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 8, height: 8, borderRadius: 4, background: d.color }} /><span style={{ fontSize: 12, color: t.textSecondary, flex: 1 }}>{d.label}</span><span style={{ fontSize: 12, fontWeight: 600, color: t.text }}>{fmt(d.value)}</span></div>)}{byCat.length > 5 && <span style={{ fontSize: 11, color: t.textSecondary }}>+{byCat.length - 5} más</span>}{byCat.length === 0 && <span style={{ fontSize: 12, color: t.textSecondary }}>Sin datos</span>}</div></div></div>;
 }

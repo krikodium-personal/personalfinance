@@ -52,7 +52,51 @@ export function DonutChart({ data, size = 160 }: { data: Array<{ value: number; 
   );
 }
 
-export function BarChart({ monthlyData, accent }: { monthlyData: Array<{ label: string; expense: number; current: boolean }>; accent: string }) {
+export function BarChart({
+  monthlyData,
+  accent,
+  selectedIndex,
+  onSelect,
+}: {
+  monthlyData: Array<{ label: string; expense: number; current: boolean }>;
+  accent: string;
+  selectedIndex?: number;
+  onSelect?: (index: number) => void;
+}) {
   const max = Math.max(...monthlyData.map(d => d.expense), 1);
-  return <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80, padding: '0 4px' }}>{monthlyData.map((d, i) => <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}><div style={{ width: '100%', background: '#e8e3dd', borderRadius: 4, height: 70, display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}><div style={{ width: '100%', background: accent, borderRadius: 4, height: `${(d.expense / max) * 100}%`, opacity: d.current ? 1 : 0.5 }} /></div><span style={{ fontSize: 9, color: '#6b6560' }}>{d.label}</span></div>)}</div>;
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80, padding: '0 4px' }}>
+      {monthlyData.map((d, i) => {
+        const isSelected = selectedIndex === i;
+        return (
+          <button
+            key={i}
+            onClick={() => onSelect?.(i)}
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 4,
+              border: isSelected ? `2px solid ${accent}` : '2px solid transparent',
+              borderRadius: 8,
+              background: isSelected ? `${accent}14` : 'transparent',
+              boxShadow: isSelected ? '0 4px 14px rgba(0,0,0,0.12)' : 'none',
+              transform: isSelected ? 'translateY(-2px)' : 'none',
+              transition: 'all 0.18s ease',
+              cursor: 'pointer',
+              padding: 2,
+            }}
+          >
+            <div style={{ width: '100%', background: '#e8e3dd', borderRadius: 4, height: 70, display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}>
+              <div style={{ width: '100%', background: accent, borderRadius: 4, height: `${(d.expense / max) * 100}%`, opacity: isSelected ? 1 : d.current ? 0.85 : 0.5 }} />
+            </div>
+            <span style={{ fontSize: isSelected ? 11 : 10, color: isSelected ? accent : '#6b6560', fontWeight: isSelected ? 700 : 500 }}>
+              {d.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
