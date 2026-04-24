@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { CATEGORIES } from '../constants';
-import { useLocalStorageState } from '../hooks/useLocalStorageState';
+import type { Dispatch, SetStateAction } from 'react';
 import type { Category, ThemePalette, Transaction } from '../types';
 import { fmt } from '../utils';
 import { Icon } from './ui';
@@ -8,13 +7,13 @@ import { Icon } from './ui';
 interface BudgetTabProps {
   transactions: Transaction[];
   budgets: Record<string, number>;
+  categories: Category[];
+  setCategories: Dispatch<SetStateAction<Category[]>>;
   onSaveBudget: (catId: string, amount: number) => Promise<void>;
   t: ThemePalette;
   accent: string;
   radius: number;
 }
-
-const initialBudgetCategories = CATEGORIES.filter(category => category.id !== 'other');
 
 function slugify(input: string) {
   return input
@@ -25,9 +24,8 @@ function slugify(input: string) {
     .replace(/(^-|-$)/g, '');
 }
 
-export function BudgetTab({ transactions, budgets, onSaveBudget, t, accent, radius }: BudgetTabProps) {
+export function BudgetTab({ transactions, budgets, categories, setCategories, onSaveBudget, t, accent, radius }: BudgetTabProps) {
   const now = new Date();
-  const [categories, setCategories] = useLocalStorageState<Category[]>('finanzas_budget_categories', initialBudgetCategories);
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
   const [budgetValue, setBudgetValue] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');

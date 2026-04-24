@@ -7,12 +7,12 @@ import { HomeTab } from './components/HomeTab';
 import { SummaryTab } from './components/SummaryTab';
 import { TweaksPanel } from './components/TweaksPanel';
 import { Icon, Spinner, Toast } from './components/ui';
-import { TWEAK_DEFAULTS, themes } from './constants';
+import { CATEGORIES, TWEAK_DEFAULTS, themes } from './constants';
 import { useAuth } from './hooks/useAuth';
 import { useEditMode } from './hooks/useEditMode';
 import { useLocalStorageState } from './hooks/useLocalStorageState';
 import { supabase } from './lib/supabase';
-import type { TabId, Transaction, Tweaks } from './types';
+import type { Category, TabId, Transaction, Tweaks } from './types';
 
 const rowToTx = (r: {
   id: string;
@@ -38,6 +38,10 @@ export default function App() {
   const [tab, setTab] = useLocalStorageState<TabId>('finanzas_tab', 'home');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Record<string, number>>({});
+  const [categories, setCategories] = useLocalStorageState<Category[]>(
+    'finanzas_budget_categories',
+    CATEGORIES.filter(category => category.id !== 'other'),
+  );
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' } | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -181,7 +185,18 @@ export default function App() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: 120 }}>
           {tab === 'home' && <HomeTab transactions={transactions} loading={loading} t={t} accent={accent} radius={radius} onDelete={deleteTransaction} />}
           {tab === 'summary' && <SummaryTab transactions={transactions} t={t} accent={accent} radius={radius} />}
-          {tab === 'budget' && <BudgetTab transactions={transactions} budgets={budgets} onSaveBudget={saveBudget} t={t} accent={accent} radius={radius} />}
+          {tab === 'budget' && (
+            <BudgetTab
+              transactions={transactions}
+              budgets={budgets}
+              categories={categories}
+              setCategories={setCategories}
+              onSaveBudget={saveBudget}
+              t={t}
+              accent={accent}
+              radius={radius}
+            />
+          )}
           {tab === 'converter' && <ConverterTab t={t} accent={accent} radius={radius} />}
         </div>
 
@@ -204,7 +219,7 @@ export default function App() {
       </div>
 
       {showTweaks && <TweaksPanel tweaks={tweaks} setTweaks={setTweaks} t={t} />}
-      {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdd={addTransaction} t={t} accent={accent} radius={radius} />}
+      {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdd={addTransaction} categories={categories} t={t} accent={accent} radius={radius} />}
     </div>
   );
 }

@@ -1,18 +1,17 @@
 import { useState } from 'react';
-import { CATEGORIES } from '../constants';
-import type { Currency, ThemePalette, Transaction, TxType } from '../types';
-import { getCat } from '../utils';
+import type { Category, Currency, ThemePalette, Transaction, TxType } from '../types';
 import { Icon, Spinner } from './ui';
 
 interface AddModalProps {
   onClose: () => void;
   onAdd: (tx: Omit<Transaction, 'id'>) => Promise<{ ok: boolean; error?: string }>;
+  categories: Category[];
   t: ThemePalette;
   accent: string;
   radius: number;
 }
 
-export function AddModal({ onClose, onAdd, t, accent, radius }: AddModalProps) {
+export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddModalProps) {
   const [type, setType] = useState<TxType>('expense');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState<Currency>('ARS');
@@ -50,6 +49,8 @@ export function AddModal({ onClose, onAdd, t, accent, radius }: AddModalProps) {
     fontSize: 15,
     outline: 'none',
   };
+
+  const selectedCategory = categories.find(item => item.id === category) || null;
 
   const submit = async () => {
     setFormError('');
@@ -203,7 +204,7 @@ export function AddModal({ onClose, onAdd, t, accent, radius }: AddModalProps) {
               }}
             >
               <span>
-                {category ? `${getCat(category).icon} ${getCat(category).label}` : 'Selecciona una opción'}
+                {selectedCategory ? `${selectedCategory.icon} ${selectedCategory.label}` : 'Selecciona una opción'}
               </span>
               <Icon name="chevronDown" size={16} color={t.textSecondary} />
             </button>
@@ -224,7 +225,7 @@ export function AddModal({ onClose, onAdd, t, accent, radius }: AddModalProps) {
                   overflowY: 'auto',
                 }}
               >
-                {CATEGORIES.map(c => (
+                {categories.map(c => (
                   <button
                     key={c.id}
                     onClick={() => {
