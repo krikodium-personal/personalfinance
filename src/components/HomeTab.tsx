@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MONTHS } from '../constants';
+import { CATEGORIES, MONTHS } from '../constants';
 import type { Category, ThemePalette, Transaction } from '../types';
 import { fmt } from '../utils';
 import { Icon, Spinner } from './ui';
@@ -124,12 +124,16 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
         <div style={{ padding: 16 }}>
           <div style={{ display: 'flex', gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: t.textSecondary }}>↑ ARS Ingresos</div>
+            <div style={{ fontSize: 11, color: t.textSecondary }}>
+              <span style={{ color: '#16a34a', fontWeight: 700 }}>↑</span> ARS Ingresos
+            </div>
             <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(arsIncome, 'ARS')}</div>
           </div>
           <div style={{ width: 1, background: t.border }} />
           <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: t.textSecondary }}>↓ ARS Gastos</div>
+            <div style={{ fontSize: 11, color: t.textSecondary }}>
+              <span style={{ color: '#dc2626', fontWeight: 700 }}>↓</span> ARS Gastos
+            </div>
             <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(arsExpense, 'ARS')}</div>
           </div>
           <div style={{ width: 1, background: t.border }} />
@@ -141,12 +145,16 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
           <div style={{ height: 1, background: t.border, margin: '12px 0' }} />
           <div style={{ display: 'flex', gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: t.textSecondary }}>↑ USD Ingresos</div>
+            <div style={{ fontSize: 11, color: t.textSecondary }}>
+              <span style={{ color: '#16a34a', fontWeight: 700 }}>↑</span> USD Ingresos
+            </div>
             <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(usdIncome, 'USD')}</div>
           </div>
           <div style={{ width: 1, background: t.border }} />
           <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: t.textSecondary }}>↓ USD Gastos</div>
+            <div style={{ fontSize: 11, color: t.textSecondary }}>
+              <span style={{ color: '#dc2626', fontWeight: 700 }}>↓</span> USD Gastos
+            </div>
             <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(usdExpense, 'USD')}</div>
           </div>
           <div style={{ width: 1, background: t.border }} />
@@ -172,7 +180,10 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {sorted.map(tx => {
-          const cat = categories.find(category => category.id === tx.category) || fallbackCategory;
+          const cat =
+            categories.find(category => category.id === tx.category) ||
+            CATEGORIES.find(category => category.id === tx.category) ||
+            fallbackCategory;
           const created = new Date(tx.createdAt || tx.date);
           const timestampLabel = `${created.getDate()} ${MONTHS[created.getMonth()]} ${created.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
 

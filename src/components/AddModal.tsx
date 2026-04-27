@@ -1,10 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Category, Currency, ThemePalette, Transaction, TxType } from '../types';
+import { arsFromUsdSaleBlueMid, blueMid, fetchDolarHoyRates, type DollarRates } from '../lib/dolarRates';
+import { fmt } from '../utils';
 import { Icon, Spinner } from './ui';
+
+type EntryMode = 'expense' | 'income' | 'dollar_sale';
 
 interface AddModalProps {
   onClose: () => void;
   onSubmit: (tx: Omit<Transaction, 'id'>) => Promise<{ ok: boolean; error?: string }>;
+  /** Venta de USD por ARS: guarda gasto en USD + ingreso en ARS (solo modal nuevo). La categoría es fija en servidor. */
+  onSubmitDollarSale?: (payload: {
+    usdAmount: number;
+    arsAmount: number;
+    descExpenseUsd: string;
+    descIncomeArs: string;
+    date: string;
+  }) => Promise<{ ok: boolean; error?: string }>;
   categories: Category[];
   t: ThemePalette;
   accent: string;
@@ -12,10 +24,28 @@ interface AddModalProps {
   initialTransaction?: Transaction | null;
 }
 
-export function AddModal({ onClose, onSubmit, categories, t, accent, radius, initialTransaction = null }: AddModalProps) {
+function modeFromTx(tx: Transaction): 'expense' | 'income' {
+  return tx.type === 'income' ? 'income' : 'expense';
+}
+
+export function AddModal({
+  onClose,
+  onSubmit,
+  onSubmitDollarSale,
+  categories,
+  t,
+  accent,
+  radius,
+  initialTransaction = null,
+}: AddModalProps) {
+  const isEdit = Boolean(initialTransaction);
   const descParts = initialTransaction?.desc?.split(' · ') || [];
   const initialSubcategory = descParts[0] || '';
   const initialDescription = descParts.slice(1).join(' · ');
+
+  const [entryMode, setEntryMode] = useState<EntryMode>(() =>
+    initialTransaction ? modeFromTx(initialTransaction) : 'expense',
+  );
   const [type, setType] = useState<TxType>(initialTransaction?.type || 'expense');
   const [amount, setAmount] = useState(
     initialTransaction?.amount
@@ -26,9 +56,35 @@ export function AddModal({ onClose, onSubmit, categories, t, accent, radius, ini
   const [subcategory, setSubcategory] = useState(initialSubcategory);
   const [description, setDescription] = useState(initialDescription);
   const [category, setCategory] = useState(initialTransaction?.category || '');
-  const [date, setDate] = useState(initialTransaction ? new Date(initialTransaction.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(
+    initialTransaction ? new Date(initialTransaction.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+  );
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+
+  const [usdSellAmount, setUsdSellAmount] = useState('');
+  const [vendor, setVendor] = useState('');
+  const [rates, setRates] = useState<DollarRates | null>(null);
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [ratesError, setRatesError] = useState('');
+
+  const loadRates = async () => {
+    setRatesLoading(true);
+    setRatesError('');
+    try {
+      const next = await fetchDolarHoyRates();
+      setRates(next);
+    } catch (err) {
+      setRates(null);
+      setRatesError(err instanceof Error ? err.message : 'No se pudieron cargar las cotizaciones.');
+    } finally {
+      setRatesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadRates();
+  }, []);
 
   const formatAmountInput = (value: string) => {
     const cleaned = value.replace(/[^\d,]/g, '');
@@ -61,7 +117,85 @@ export function AddModal({ onClose, onSubmit, categories, t, accent, radius, ini
   const selectedCategory = categories.find(item => item.id === category) || null;
   const subcategoryOptions = selectedCategory?.subcategories || [];
 
+  const usdNumeric = useMemo(() => {
+    const normalized = usdSellAmount.replace(/\./g, '').replace(',', '.');
+    const n = Number(normalized);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }, [usdSellAmount]);
+
+  const arsFromSale = useMemo(() => {
+    if (!rates || usdNumeric <= 0) return 0;
+    return Math.round(arsFromUsdSaleBlueMid(usdNumeric, rates.blue) * 100) / 100;
+  }, [rates, usdNumeric]);
+
+  const syncEntryModeToType = (mode: EntryMode) => {
+    setEntryMode(mode);
+    if (mode === 'expense') setType('expense');
+    else if (mode === 'income') setType('income');
+  };
+
+  const buildDescPair = (vendorTrimmed: string, trimmedDescription: string) => {
+    const tailUsd = `Venta USD a ${vendorTrimmed}`;
+    const tailArs = `Ingreso ARS por venta USD a ${vendorTrimmed}`;
+    if (trimmedDescription) {
+      return {
+        usd: `${tailUsd} · ${trimmedDescription}`,
+        ars: `${tailArs} · ${trimmedDescription}`,
+      };
+    }
+    return { usd: tailUsd, ars: tailArs };
+  };
+
+  const submitDollarSale = async () => {
+    setFormError('');
+    if (!onSubmitDollarSale) {
+      setFormError('Esta acción no está disponible al editar.');
+      return;
+    }
+    if (!usdNumeric || usdNumeric <= 0) {
+      setFormError('Ingresá cuántos dólares vendés.');
+      return;
+    }
+    const vendorTrimmed = vendor.trim();
+    if (!vendorTrimmed) {
+      setFormError('Indicá a quién le vendiste.');
+      return;
+    }
+    if (!rates) {
+      setFormError('No hay cotización del dólar blue. Probá actualizar o intentá más tarde.');
+      return;
+    }
+    const arsAmount = Math.round(arsFromUsdSaleBlueMid(usdNumeric, rates.blue) * 100) / 100;
+    if (arsAmount <= 0) {
+      setFormError('El monto en pesos no es válido.');
+      return;
+    }
+
+    const trimmedDescription = description.trim();
+    const { usd: descExpenseUsd, ars: descIncomeArs } = buildDescPair(vendorTrimmed, trimmedDescription);
+
+    setSaving(true);
+    const result = await onSubmitDollarSale({
+      usdAmount: usdNumeric,
+      arsAmount,
+      descExpenseUsd,
+      descIncomeArs,
+      date: new Date(date).toISOString(),
+    });
+    setSaving(false);
+    if (!result.ok) {
+      setFormError(result.error || 'No se pudo guardar la operación.');
+      return;
+    }
+    onClose();
+  };
+
   const submit = async () => {
+    if (entryMode === 'dollar_sale') {
+      await submitDollarSale();
+      return;
+    }
+
     setFormError('');
     const normalizedAmount = amount.replace(/\./g, '').replace(',', '.');
     const num = Number(normalizedAmount);
@@ -75,9 +209,10 @@ export function AddModal({ onClose, onSubmit, categories, t, accent, radius, ini
     }
     setSaving(true);
     const trimmedDescription = description.trim();
-    const composedDescription = subcategory && trimmedDescription
-      ? `${subcategory} · ${trimmedDescription}`
-      : (subcategory || trimmedDescription);
+    const composedDescription =
+      subcategory && trimmedDescription
+        ? `${subcategory} · ${trimmedDescription}`
+        : subcategory || trimmedDescription;
     const result = await onSubmit({
       type,
       category,
@@ -92,6 +227,14 @@ export function AddModal({ onClose, onSubmit, categories, t, accent, radius, ini
       return;
     }
     onClose();
+  };
+
+  const toggleModes: EntryMode[] = isEdit ? ['expense', 'income'] : ['expense', 'income', 'dollar_sale'];
+
+  const toggleLabel = (mode: EntryMode) => {
+    if (mode === 'expense') return 'Gasto';
+    if (mode === 'income') return 'Ingreso';
+    return 'Dólares';
   };
 
   return (
@@ -133,102 +276,174 @@ export function AddModal({ onClose, onSubmit, categories, t, accent, radius, ini
         </div>
 
         <div style={{ display: 'flex', background: t.inputBg, borderRadius: radius * 0.6, padding: 3, marginBottom: 20 }}>
-          {(['expense', 'income'] as const).map(tp => (
+          {toggleModes.map(mode => (
             <button
-              key={tp}
-              onClick={() => setType(tp)}
+              key={mode}
+              onClick={() => syncEntryModeToType(mode)}
               style={{
                 flex: 1,
-                padding: '9px 0',
+                padding: '9px 4px',
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 500,
                 borderRadius: radius * 0.5,
-                background: type === tp ? accent : 'transparent',
-                color: type === tp ? '#fff' : t.textSecondary,
+                background: entryMode === mode ? accent : 'transparent',
+                color: entryMode === mode ? '#fff' : t.textSecondary,
               }}
             >
-              {tp === 'expense' ? 'Gasto' : 'Ingreso'}
+              {toggleLabel(mode)}
             </button>
           ))}
         </div>
 
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
-            MONTO <span style={{ color: '#dc2626' }}>*</span>
-          </label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ display: 'flex', background: t.inputBg, borderRadius: radius * 0.6, padding: 3, flexShrink: 0 }}>
-              {(['ARS', 'USD'] as const).map(cur => (
-                <button
-                  key={cur}
-                  onClick={() => setCurrency(cur)}
-                  style={{
-                    padding: '8px 12px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    borderRadius: radius * 0.45,
-                    background: currency === cur ? accent : 'transparent',
-                    color: currency === cur ? '#fff' : t.textSecondary,
-                  }}
-                >
-                  {cur}
-                </button>
-              ))}
+        {entryMode === 'dollar_sale' && (
+          <>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
+                Cantidad de dólares a vender: <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <input
+                style={inputStyle}
+                type="text"
+                inputMode="decimal"
+                placeholder="0"
+                value={usdSellAmount}
+                onChange={e => setUsdSellAmount(formatAmountInput(e.target.value))}
+              />
+              {ratesLoading && (
+                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: t.textSecondary }}>
+                  <Spinner color={accent} /> Cotización blue…
+                </div>
+              )}
+              {!ratesLoading && ratesError && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 13, color: '#b42318', marginBottom: 6 }}>{ratesError}</div>
+                  <button
+                    type="button"
+                    onClick={() => void loadRates()}
+                    style={{
+                      border: `1px solid ${accent}`,
+                      background: 'transparent',
+                      color: accent,
+                      borderRadius: 8,
+                      padding: '6px 12px',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              )}
+              {!ratesLoading && rates && usdNumeric > 0 && (
+                <div style={{ marginTop: 12, padding: '12px 14px', background: t.inputBg, borderRadius: radius * 0.6, border: `1px solid ${t.border}` }}>
+                  <div style={{ fontSize: 12, color: t.textSecondary, marginBottom: 4 }}>Equivale a (dólar blue intermedio)</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: t.text }}>{fmt(arsFromSale, 'ARS')}</div>
+                  <div style={{ fontSize: 11, color: t.textSecondary, marginTop: 6 }}>
+                    Tipo intermedio: {fmt(blueMid(rates.blue), 'ARS')} por USD · Fuente: dolarhoy.com
+                  </div>
+                </div>
+              )}
             </div>
-            <input
-              style={inputStyle}
-              type="text"
-              inputMode="decimal"
-              placeholder=""
-              value={amount}
-              onChange={e => setAmount(formatAmountInput(e.target.value))}
-            />
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
+                A quién le vendí: <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <input
+                style={inputStyle}
+                type="text"
+                placeholder="Nombre o referencia"
+                value={vendor}
+                onChange={e => setVendor(e.target.value)}
+                autoCapitalize="sentences"
+              />
+            </div>
+          </>
+        )}
+
+        {entryMode !== 'dollar_sale' && (
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
+              MONTO <span style={{ color: '#dc2626' }}>*</span>
+            </label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', background: t.inputBg, borderRadius: radius * 0.6, padding: 3, flexShrink: 0 }}>
+                {(['ARS', 'USD'] as const).map(cur => (
+                  <button
+                    key={cur}
+                    onClick={() => setCurrency(cur)}
+                    style={{
+                      padding: '8px 12px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      borderRadius: radius * 0.45,
+                      background: currency === cur ? accent : 'transparent',
+                      color: currency === cur ? '#fff' : t.textSecondary,
+                    }}
+                  >
+                    {cur}
+                  </button>
+                ))}
+              </div>
+              <input
+                style={inputStyle}
+                type="text"
+                inputMode="decimal"
+                placeholder=""
+                value={amount}
+                onChange={e => setAmount(formatAmountInput(e.target.value))}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
-            CATEGORÍA <span style={{ color: '#dc2626' }}>*</span>
-          </label>
-          <select
-            style={inputStyle}
-            value={category}
-            onChange={e => {
-              setCategory(e.target.value);
-              setSubcategory('');
-            }}
-          >
-            <option value="">Selecciona una opción</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>
-                {`${c.icon} ${c.label}`}
-              </option>
-            ))}
-          </select>
-        </div>
+        {entryMode !== 'dollar_sale' && (
+          <>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
+                CATEGORÍA <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <select
+                style={inputStyle}
+                value={category}
+                onChange={e => {
+                  setCategory(e.target.value);
+                  setSubcategory('');
+                }}
+              >
+                <option value="">Selecciona una opción</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {`${c.icon} ${c.label}`}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
-            SUBCATEGORÍA
-          </label>
-          <select
-            style={inputStyle}
-            value={subcategory}
-            onChange={e => setSubcategory(e.target.value)}
-            disabled={!selectedCategory}
-          >
-            <option value="">{selectedCategory ? 'Selecciona una opción' : 'Primero elegí una categoría'}</option>
-            {subcategoryOptions.map(item => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
+                SUBCATEGORÍA
+              </label>
+              <select
+                style={inputStyle}
+                value={subcategory}
+                onChange={e => setSubcategory(e.target.value)}
+                disabled={!selectedCategory}
+              >
+                <option value="">{selectedCategory ? 'Selecciona una opción' : 'Primero elegí una categoría'}</option>
+                {subcategoryOptions.map(item => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
 
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>DESCRIPCIÓN</label>
@@ -276,8 +491,12 @@ export function AddModal({ onClose, onSubmit, categories, t, accent, radius, ini
             <>
               <Spinner color="#fff" /> Guardando...
             </>
+          ) : initialTransaction ? (
+            'Guardar cambios'
+          ) : entryMode === 'dollar_sale' ? (
+            'Guardar venta USD / ingreso ARS'
           ) : (
-            initialTransaction ? 'Guardar cambios' : 'Guardar'
+            'Guardar'
           )}
         </button>
       </div>

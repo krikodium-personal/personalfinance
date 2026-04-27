@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { fmt } from '../utils';
-import type { ThemePalette } from '../types';
+import type { Currency, ThemePalette } from '../types';
 
 export function Icon({ name, size = 20, color = 'currentColor' }: { name: string; size?: number; color?: string }) {
   const icons: Record<string, ReactNode> = {
@@ -29,12 +29,21 @@ export function Toast({ message, type, t }: { message: string; type: 'info' | 'e
   return <div style={{ position: 'absolute', top: 60, left: 16, right: 16, zIndex: 200, background: type === 'error' ? '#e05555' : t.text, color: '#fff', padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 500, boxShadow: '0 4px 20px rgba(0,0,0,0.2)', animation: 'fadeIn 0.2s ease' }}>{message}</div>;
 }
 
-export function DonutChart({ data, size = 160 }: { data: Array<{ value: number; color: string }>; size?: number }) {
+export function DonutChart({
+  data,
+  size = 160,
+  currency = 'ARS',
+}: {
+  data: Array<{ value: number; color: string }>;
+  size?: number;
+  /** Moneda del total central y del gráfico (solo afecta el formato del número). */
+  currency?: Currency;
+}) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (!total) return <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: 13 }}>Sin datos</div>;
   const r = size * 0.33;
   const stroke = Math.max(16, size * 0.12);
-  const totalLabel = fmt(total);
+  const totalLabel = fmt(total, currency);
   const innerDiameter = (r - stroke / 2) * 2;
   const estimatedCharWidth = 0.56;
   const maxAmountFont = size * 0.1;

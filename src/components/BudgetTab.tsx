@@ -9,6 +9,8 @@ interface BudgetTabProps {
   budgets: Record<string, number>;
   categories: Category[];
   setCategories: Dispatch<SetStateAction<Category[]>>;
+  /** Persist category list to Supabase after structural edits (rename, icon, subcategories, order). */
+  onPersistCategories: (categories: Category[]) => Promise<void>;
   onSaveBudget: (catId: string, amount: number) => Promise<void>;
   t: ThemePalette;
   accent: string;
@@ -24,7 +26,17 @@ function slugify(input: string) {
     .replace(/(^-|-$)/g, '');
 }
 
-export function BudgetTab({ transactions, budgets, categories, setCategories, onSaveBudget, t, accent, radius }: BudgetTabProps) {
+export function BudgetTab({
+  transactions,
+  budgets,
+  categories,
+  setCategories,
+  onPersistCategories,
+  onSaveBudget,
+  t,
+  accent,
+  radius,
+}: BudgetTabProps) {
   const now = new Date();
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
   const [budgetValue, setBudgetValue] = useState('');
@@ -44,6 +56,14 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
     return tx.type === 'expense' && tx.currency !== 'USD' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
 
+  const commitCategories = (updater: (prev: Category[]) => Category[]) => {
+    setCategories(prev => {
+      const next = updater(prev);
+      queueMicrotask(() => void onPersistCategories(next));
+      return next;
+    });
+  };
+
   const handleSaveBudget = async (catId: string) => {
     const raw = budgetValue.trim();
     const val = raw === '' ? 0 : parseFloat(raw.replace(/\./g, '').replace(',', '.'));
@@ -54,7 +74,12 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
   };
 
   const handleDeleteCategory = async (catId: string) => {
-    setCategories(prev => prev.filter(category => category.id !== catId));
+    let nextList: Category[] = [];
+    setCategories(prev => {
+      nextList = prev.filter(category => category.id !== catId);
+      return nextList;
+    });
+    await onPersistCategories(nextList);
     await onSaveBudget(catId, 0);
     if (editingBudget === catId) {
       setEditingBudget(null);
@@ -67,7 +92,7 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
     const nextIcon = renameIconValue.trim();
     if (!nextLabel) return;
 
-    setCategories(prev =>
+    commitCategories(prev =>
       prev.map(category =>
         category.id === catId ? { ...category, label: nextLabel, icon: nextIcon || category.icon } : category,
       ),
@@ -84,7 +109,7 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
     const baseId = slugify(label) || 'categoria';
     const nextId = `${baseId}-${Date.now().toString(36)}`;
 
-    setCategories(prev => [
+    commitCategories(prev => [
       ...prev,
       {
         id: nextId,
@@ -103,7 +128,7 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
     const raw = (newSubcategoryById[catId] || '').trim();
     if (!raw) return;
 
-    setCategories(prev =>
+    commitCategories(prev =>
       prev.map(category => {
         if (category.id !== catId) return category;
         if (category.subcategories.some(sub => sub.toLowerCase() === raw.toLowerCase())) return category;
@@ -114,7 +139,7 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
   };
 
   const handleDeleteSubcategory = (catId: string, subLabel: string) => {
-    setCategories(prev =>
+    commitCategories(prev =>
       prev.map(category => {
         if (category.id !== catId) return category;
         return {
@@ -127,7 +152,7 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
 
   const handleReorderCategories = (fromId: string, toId: string) => {
     if (!fromId || !toId || fromId === toId) return;
-    setCategories(prev => {
+    commitCategories(prev => {
       const fromIndex = prev.findIndex(category => category.id === fromId);
       const toIndex = prev.findIndex(category => category.id === toId);
       if (fromIndex < 0 || toIndex < 0) return prev;

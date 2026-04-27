@@ -1,6 +1,10 @@
 import type { Category } from './types';
 
+/** Categoría usada solo para ventas USD→ARS (sin elegir en el modal). */
+export const DOLLAR_SALE_CATEGORY_ID = 'cambio-usd';
+
 export const CATEGORIES: Category[] = [
+  { id: 'cambio-usd', label: 'Cambio USD', icon: '💵', color: '#6b7280', subcategories: [] },
   { id: 'comida', label: 'Comida', icon: '🍽', color: '#e07b54', subcategories: ['Verdulería', 'Carnicería', 'Milanesas', 'Super', 'Almacén'] },
   { id: 'visa', label: 'Visa', icon: '💳', color: '#4f8ef7', subcategories: [] },
   { id: 'amex', label: 'Amex', icon: '💳', color: '#6ba9ff', subcategories: [] },

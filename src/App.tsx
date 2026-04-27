@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AddModal } from './components/AddModal';
 import { AuthScreen } from './components/AuthScreen';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
@@ -8,7 +8,7 @@ import { HomeTab } from './components/HomeTab';
 import { SummaryTab } from './components/SummaryTab';
 import { TweaksPanel } from './components/TweaksPanel';
 import { Icon, Spinner, Toast } from './components/ui';
-import { CATEGORIES, TWEAK_DEFAULTS, themes } from './constants';
+import { CATEGORIES, DOLLAR_SALE_CATEGORY_ID, TWEAK_DEFAULTS, themes } from './constants';
 import { useAuth } from './hooks/useAuth';
 import { useEditMode } from './hooks/useEditMode';
 import { useLocalStorageState } from './hooks/useLocalStorageState';
@@ -71,7 +71,8 @@ export default function App() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showTweaks, setShowTweaks] = useState(false);
   const CATEGORY_MIGRATION_KEY = 'finanzas_categories_migration_v2_applied';
-  const [categoriesLoadedFromDb, setCategoriesLoadedFromDb] = useState(false);
+  /** Latest `updated_at` we trust from Supabase (avoids applying stale GET after a newer upsert). */
+  const serverCategoriesUpdatedAtRef = useRef<string | null>(null);
 
   useEffect(() => {
     const migrationDone = window.localStorage.getItem(CATEGORY_MIGRATION_KEY) === '1';
@@ -121,29 +122,63 @@ export default function App() {
     }
   }, []);
 
+  const persistUserCategories = useCallback(
+    async (cats: Category[]) => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('user_categories')
+        .upsert(
+          {
+            user_id: user.id,
+            categories: cats,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' },
+        )
+        .select('updated_at')
+        .maybeSingle();
+
+      if (error) {
+        showToast('No se pudieron guardar categorías en Supabase.', 'error');
+        return;
+      }
+      if (data?.updated_at) {
+        serverCategoriesUpdatedAtRef.current = data.updated_at;
+      }
+    },
+    [user],
+  );
+
   const loadCategories = useCallback(async () => {
     if (!user) return;
     const { data, error } = await supabase
       .from('user_categories')
-      .select('categories')
+      .select('categories, updated_at')
       .eq('user_id', user.id)
       .maybeSingle();
 
     if (error) {
       showToast('No se pudieron cargar categorías desde Supabase. Se usan las locales.', 'error');
-      setCategoriesLoadedFromDb(true);
       return;
     }
 
-    if (data?.categories) {
-      setCategories(normalizeCategories(data.categories));
+    if (data) {
+      const incomingTs = data.updated_at;
+      const knownTs = serverCategoriesUpdatedAtRef.current;
+      if (incomingTs && knownTs && incomingTs < knownTs) {
+        return;
+      }
+      if (data.categories) {
+        setCategories(normalizeCategories(data.categories));
+        if (data.updated_at) {
+          serverCategoriesUpdatedAtRef.current = data.updated_at;
+        }
+      }
     }
-    setCategoriesLoadedFromDb(true);
   }, [user, setCategories]);
 
   useEffect(() => {
     if (user) {
-      setCategoriesLoadedFromDb(false);
       loadTransactions();
       loadBudgets();
       loadCategories();
@@ -151,19 +186,8 @@ export default function App() {
   }, [user, loadTransactions, loadBudgets, loadCategories]);
 
   useEffect(() => {
-    if (!user || !categoriesLoadedFromDb) return;
-    const syncCategories = async () => {
-      const { error } = await supabase.from('user_categories').upsert({
-        user_id: user.id,
-        categories,
-        updated_at: new Date().toISOString(),
-      });
-      if (error) {
-        showToast('No se pudieron guardar categorías en Supabase.', 'error');
-      }
-    };
-    void syncCategories();
-  }, [user, categoriesLoadedFromDb, categories]);
+    serverCategoriesUpdatedAtRef.current = null;
+  }, [user?.id]);
 
   const addTransaction = async (tx: Omit<Transaction, 'id'>): Promise<{ ok: boolean; error?: string }> => {
     if (!user) return { ok: false, error: 'Sesión inválida. Volvé a iniciar sesión.' };
@@ -188,6 +212,45 @@ export default function App() {
 
     await loadTransactions();
     showToast('Transacción guardada y lista actualizada ✓');
+    return { ok: true };
+  };
+
+  const addDollarSale = async (payload: {
+    usdAmount: number;
+    arsAmount: number;
+    descExpenseUsd: string;
+    descIncomeArs: string;
+    date: string;
+  }): Promise<{ ok: boolean; error?: string }> => {
+    if (!user) return { ok: false, error: 'Sesión inválida. Volvé a iniciar sesión.' };
+    const { error } = await supabase.from('transactions').insert([
+      {
+        type: 'expense',
+        category: DOLLAR_SALE_CATEGORY_ID,
+        amount: payload.usdAmount,
+        currency: 'USD',
+        description: payload.descExpenseUsd,
+        date: payload.date,
+        user_id: user.id,
+      },
+      {
+        type: 'income',
+        category: DOLLAR_SALE_CATEGORY_ID,
+        amount: payload.arsAmount,
+        currency: 'ARS',
+        description: payload.descIncomeArs,
+        date: payload.date,
+        user_id: user.id,
+      },
+    ]);
+
+    if (error) {
+      showToast(`Error al guardar: ${error.message}`, 'error');
+      return { ok: false, error: error.message };
+    }
+
+    await loadTransactions();
+    showToast('Venta en USD e ingreso en ARS registrados ✓');
     return { ok: true };
   };
 
@@ -239,7 +302,7 @@ export default function App() {
     await signOut();
     setTransactions([]);
     setBudgets({});
-    setCategoriesLoadedFromDb(false);
+    serverCategoriesUpdatedAtRef.current = null;
   };
 
   if (authLoading) {
@@ -322,6 +385,7 @@ export default function App() {
               budgets={budgets}
               categories={categories}
               setCategories={setCategories}
+              onPersistCategories={persistUserCategories}
               onSaveBudget={saveBudget}
               t={t}
               accent={accent}
@@ -354,6 +418,7 @@ export default function App() {
         <AddModal
           onClose={() => setShowAdd(false)}
           onSubmit={addTransaction}
+          onSubmitDollarSale={addDollarSale}
           categories={categories}
           t={t}
           accent={accent}
