@@ -22,6 +22,7 @@ const rowToTx = (r: {
   currency: Transaction['currency'];
   description: string;
   date: string;
+  created_at?: string;
 }): Transaction => ({
   id: r.id,
   type: r.type,
@@ -30,6 +31,7 @@ const rowToTx = (r: {
   currency: r.currency || 'ARS',
   desc: r.description,
   date: r.date,
+  createdAt: r.created_at,
 });
 
 const normalizeCategories = (items: unknown): Category[] => {
@@ -65,6 +67,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' } | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showTweaks, setShowTweaks] = useState(false);
   const CATEGORY_MIGRATION_KEY = 'finanzas_categories_migration_v2_applied';
   const [categoriesLoadedFromDb, setCategoriesLoadedFromDb] = useState(false);
@@ -93,7 +96,11 @@ export default function App() {
 
   const loadTransactions = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .order('date', { ascending: false });
     if (error) {
       showToast(`Error al cargar datos: ${error.message}`, 'error');
     } else {
@@ -183,6 +190,31 @@ export default function App() {
     return { ok: true };
   };
 
+  const updateTransaction = async (id: string, tx: Omit<Transaction, 'id'>): Promise<{ ok: boolean; error?: string }> => {
+    if (!user) return { ok: false, error: 'Sesión inválida. Volvé a iniciar sesión.' };
+    const { error } = await supabase
+      .from('transactions')
+      .update({
+        type: tx.type,
+        category: tx.category,
+        amount: tx.amount,
+        currency: tx.currency,
+        description: tx.desc,
+        date: tx.date,
+      })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      showToast(`Error al actualizar: ${error.message}`, 'error');
+      return { ok: false, error: error.message };
+    }
+
+    await loadTransactions();
+    showToast('Transacción actualizada ✓');
+    return { ok: true };
+  };
+
   const deleteTransaction = async (id: string) => {
     const { error } = await supabase.from('transactions').delete().eq('id', id);
     if (error) {
@@ -252,7 +284,18 @@ export default function App() {
         </div>
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: 120 }}>
-          {tab === 'home' && <HomeTab transactions={transactions} categories={categories} loading={loading} t={t} accent={accent} radius={radius} onDelete={deleteTransaction} />}
+          {tab === 'home' && (
+            <HomeTab
+              transactions={transactions}
+              categories={categories}
+              loading={loading}
+              t={t}
+              accent={accent}
+              radius={radius}
+              onDelete={deleteTransaction}
+              onEdit={tx => setEditingTransaction(tx)}
+            />
+          )}
           {tab === 'summary' && <SummaryTab transactions={transactions} categories={categories} t={t} accent={accent} radius={radius} />}
           {tab === 'budget' && (
             <BudgetTab
@@ -288,7 +331,27 @@ export default function App() {
       </div>
 
       {showTweaks && <TweaksPanel tweaks={tweaks} setTweaks={setTweaks} t={t} />}
-      {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdd={addTransaction} categories={categories} t={t} accent={accent} radius={radius} />}
+      {showAdd && (
+        <AddModal
+          onClose={() => setShowAdd(false)}
+          onSubmit={addTransaction}
+          categories={categories}
+          t={t}
+          accent={accent}
+          radius={radius}
+        />
+      )}
+      {editingTransaction && (
+        <AddModal
+          onClose={() => setEditingTransaction(null)}
+          onSubmit={tx => updateTransaction(editingTransaction.id, tx)}
+          categories={categories}
+          t={t}
+          accent={accent}
+          radius={radius}
+          initialTransaction={editingTransaction}
+        />
+      )}
     </div>
   );
 }

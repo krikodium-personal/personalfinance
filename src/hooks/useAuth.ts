@@ -17,11 +17,20 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const signupRedirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`;
+
   return {
     user,
     loading,
     signIn: (email: string, password: string) => supabase.auth.signInWithPassword({ email, password }),
-    signUp: (email: string, password: string) => supabase.auth.signUp({ email, password }),
+    signUp: (email: string, password: string) =>
+      supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: signupRedirectTo,
+        },
+      }),
     signOut: () => supabase.auth.signOut(),
   };
 }

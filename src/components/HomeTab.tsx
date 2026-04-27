@@ -12,11 +12,12 @@ interface HomeTabProps {
   accent: string;
   radius: number;
   onDelete: (id: string) => void;
+  onEdit: (tx: Transaction) => void;
 }
 
 const fallbackCategory: Category = { id: 'other', label: 'Otras', icon: '📦', color: '#a0a0a0', subcategories: [] };
 
-export function HomeTab({ transactions, categories, loading, t, accent, radius, onDelete }: HomeTabProps) {
+export function HomeTab({ transactions, categories, loading, t, accent, radius, onDelete, onEdit }: HomeTabProps) {
   const now = new Date();
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [balanceView, setBalanceView] = useState<'monthly' | 'annual'>('monthly');
@@ -46,7 +47,10 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
   const balanceValue = arsIncome - arsExpense;
   const balanceLabel = balanceView === 'monthly' ? 'BALANCE DEL MES (ARS)' : `BALANCE ANUAL ${filterYear} (ARS)`;
 
-  const sorted = [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const sorted = [...filtered].sort(
+    (a, b) =>
+      new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime(),
+  );
 
   return (
     <div style={{ padding: '0 16px' }}>
@@ -169,10 +173,15 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {sorted.map(tx => {
           const cat = categories.find(category => category.id === tx.category) || fallbackCategory;
-          const d = new Date(tx.date);
+          const created = new Date(tx.createdAt || tx.date);
+          const timestampLabel = `${created.getDate()} ${MONTHS[created.getMonth()]} ${created.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
 
           return (
-            <div key={tx.id} style={{ background: t.card, borderRadius: radius * 0.75, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              key={tx.id}
+              onClick={() => onEdit(tx)}
+              style={{ background: t.card, borderRadius: radius * 0.75, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+            >
               <div
                 style={{
                   width: 42,
@@ -193,7 +202,7 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
                 <div style={{ fontSize: 14, fontWeight: 500, color: t.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx.desc}</div>
                 <div style={{ marginTop: 2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{tx.type === 'income' ? 'Ingreso' : cat.label}</span>
-                  <span style={{ fontSize: 12, color: t.textSecondary }}>· {d.getDate()} {MONTHS[d.getMonth()]}</span>
+                  <span style={{ fontSize: 12, color: t.textSecondary }}>· {timestampLabel}</span>
                 </div>
               </div>
 
@@ -202,7 +211,13 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
                   {tx.type === 'income' ? '+' : '-'}
                   {fmt(tx.amount, tx.currency)}
                 </div>
-                <button onClick={() => onDelete(tx.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textSecondary, opacity: 0.5 }}>
+                <button
+                  onClick={e => {
+                    e.stopPropagation();
+                    onDelete(tx.id);
+                  }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textSecondary, opacity: 0.5 }}
+                >
                   <Icon name="trash" size={15} />
                 </button>
               </div>

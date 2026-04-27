@@ -4,21 +4,29 @@ import { Icon, Spinner } from './ui';
 
 interface AddModalProps {
   onClose: () => void;
-  onAdd: (tx: Omit<Transaction, 'id'>) => Promise<{ ok: boolean; error?: string }>;
+  onSubmit: (tx: Omit<Transaction, 'id'>) => Promise<{ ok: boolean; error?: string }>;
   categories: Category[];
   t: ThemePalette;
   accent: string;
   radius: number;
+  initialTransaction?: Transaction | null;
 }
 
-export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddModalProps) {
-  const [type, setType] = useState<TxType>('expense');
-  const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState<Currency>('ARS');
-  const [subcategory, setSubcategory] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+export function AddModal({ onClose, onSubmit, categories, t, accent, radius, initialTransaction = null }: AddModalProps) {
+  const descParts = initialTransaction?.desc?.split(' · ') || [];
+  const initialSubcategory = descParts[0] || '';
+  const initialDescription = descParts.slice(1).join(' · ');
+  const [type, setType] = useState<TxType>(initialTransaction?.type || 'expense');
+  const [amount, setAmount] = useState(
+    initialTransaction?.amount
+      ? initialTransaction.amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '',
+  );
+  const [currency, setCurrency] = useState<Currency>(initialTransaction?.currency || 'ARS');
+  const [subcategory, setSubcategory] = useState(initialSubcategory);
+  const [description, setDescription] = useState(initialDescription);
+  const [category, setCategory] = useState(initialTransaction?.category || '');
+  const [date, setDate] = useState(initialTransaction ? new Date(initialTransaction.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -65,14 +73,12 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
       setFormError('Seleccioná una categoría.');
       return;
     }
-    if (!subcategory) {
-      setFormError('Seleccioná una subcategoría.');
-      return;
-    }
-
     setSaving(true);
-    const composedDescription = description.trim() ? `${subcategory} · ${description.trim()}` : subcategory;
-    const result = await onAdd({
+    const trimmedDescription = description.trim();
+    const composedDescription = subcategory && trimmedDescription
+      ? `${subcategory} · ${trimmedDescription}`
+      : (subcategory || trimmedDescription);
+    const result = await onSubmit({
       type,
       category,
       amount: num,
@@ -118,7 +124,9 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <span style={{ fontSize: 17, fontWeight: 600, color: t.text }}>Nueva transacción</span>
+          <span style={{ fontSize: 17, fontWeight: 600, color: t.text }}>
+            {initialTransaction ? 'Editar transacción' : 'Nueva transacción'}
+          </span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textSecondary }}>
             <Icon name="x" size={22} />
           </button>
@@ -205,7 +213,7 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
 
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
-            SUBCATEGORÍA <span style={{ color: '#dc2626' }}>*</span>
+            SUBCATEGORÍA
           </label>
           <select
             style={inputStyle}
@@ -269,7 +277,7 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
               <Spinner color="#fff" /> Guardando...
             </>
           ) : (
-            'Guardar'
+            initialTransaction ? 'Guardar cambios' : 'Guardar'
           )}
         </button>
       </div>

@@ -10,6 +10,7 @@ export interface Transaction {
   currency: Currency;
   desc: string;
   date: string;
+  createdAt?: string;
 }
 
 export interface Category {
