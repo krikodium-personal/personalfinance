@@ -14,7 +14,7 @@ interface HomeTabProps {
   onDelete: (id: string) => void;
 }
 
-const fallbackCategory: Category = { id: 'other', label: 'Otras', icon: '📦', color: '#a0a0a0' };
+const fallbackCategory: Category = { id: 'other', label: 'Otras', icon: '📦', color: '#a0a0a0', subcategories: [] };
 
 export function HomeTab({ transactions, categories, loading, t, accent, radius, onDelete }: HomeTabProps) {
   const now = new Date();

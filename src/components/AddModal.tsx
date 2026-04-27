@@ -15,7 +15,7 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
   const [type, setType] = useState<TxType>('expense');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState<Currency>('ARS');
-  const [desc, setDesc] = useState('');
+  const [subcategory, setSubcategory] = useState('');
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [showCats, setShowCats] = useState(false);
@@ -51,6 +51,7 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
   };
 
   const selectedCategory = categories.find(item => item.id === category) || null;
+  const subcategoryOptions = selectedCategory?.subcategories || [];
 
   const submit = async () => {
     setFormError('');
@@ -60,18 +61,22 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
       setFormError('Ingresá un monto válido mayor a 0.');
       return;
     }
-    if (type === 'expense' && !category) {
+    if (!category) {
       setFormError('Seleccioná una categoría.');
+      return;
+    }
+    if (!subcategory) {
+      setFormError('Seleccioná una subcategoría.');
       return;
     }
 
     setSaving(true);
     const result = await onAdd({
       type,
-      category: type === 'expense' ? category : 'other',
+      category,
       amount: num,
       currency,
-      desc: desc.trim(),
+      desc: subcategory,
       date: new Date(date).toISOString(),
     });
     setSaving(false);
@@ -174,84 +179,90 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
           </div>
         </div>
 
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>DESCRIPCIÓN</label>
-          <input
-            style={inputStyle}
-            type="text"
-            placeholder="¿En qué gastaste?"
-            value={desc}
-            onChange={e => setDesc(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && submit()}
-          />
-        </div>
+        <div style={{ marginBottom: 14, position: 'relative' }}>
+          <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
+            CATEGORÍA <span style={{ color: '#dc2626' }}>*</span>
+          </label>
+          <button
+            onClick={() => setShowCats(!showCats)}
+            style={{
+              ...inputStyle,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              textAlign: 'left',
+              border: `1.5px solid ${showCats ? accent : t.border}`,
+            }}
+          >
+            <span>
+              {selectedCategory ? `${selectedCategory.icon} ${selectedCategory.label}` : 'Selecciona una opción'}
+            </span>
+            <Icon name="chevronDown" size={16} color={t.textSecondary} />
+          </button>
 
-        {type === 'expense' && (
-          <div style={{ marginBottom: 14, position: 'relative' }}>
-            <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
-              CATEGORÍA <span style={{ color: '#dc2626' }}>*</span>
-            </label>
-            <button
-              onClick={() => setShowCats(!showCats)}
+          {showCats && (
+            <div
               style={{
-                ...inputStyle,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                cursor: 'pointer',
-                textAlign: 'left',
-                border: `1.5px solid ${showCats ? accent : t.border}`,
+                position: 'absolute',
+                bottom: 'calc(100% + 8px)',
+                left: 0,
+                right: 0,
+                background: t.card,
+                border: `1px solid ${t.border}`,
+                borderRadius: radius * 0.6,
+                zIndex: 20,
+                boxShadow: t.shadow,
+                maxHeight: 220,
+                overflowY: 'auto',
               }}
             >
-              <span>
-                {selectedCategory ? `${selectedCategory.icon} ${selectedCategory.label}` : 'Selecciona una opción'}
-              </span>
-              <Icon name="chevronDown" size={16} color={t.textSecondary} />
-            </button>
+              {categories.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setCategory(c.id);
+                    setSubcategory('');
+                    setShowCats(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    color: t.text,
+                    fontSize: 14,
+                    background: category === c.id ? t.cardAlt : 'transparent',
+                  }}
+                >
+                  <span style={{ fontSize: 18 }}>{c.icon}</span> {c.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-            {showCats && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: 'calc(100% + 8px)',
-                  left: 0,
-                  right: 0,
-                  background: t.card,
-                  border: `1px solid ${t.border}`,
-                  borderRadius: radius * 0.6,
-                  zIndex: 20,
-                  boxShadow: t.shadow,
-                  maxHeight: 220,
-                  overflowY: 'auto',
-                }}
-              >
-                {categories.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => {
-                      setCategory(c.id);
-                      setShowCats(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '11px 14px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      color: t.text,
-                      fontSize: 14,
-                      background: category === c.id ? t.cardAlt : 'transparent',
-                    }}
-                  >
-                    <span style={{ fontSize: 18 }}>{c.icon}</span> {c.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
+            SUBCATEGORÍA <span style={{ color: '#dc2626' }}>*</span>
+          </label>
+          <select
+            style={inputStyle}
+            value={subcategory}
+            onChange={e => setSubcategory(e.target.value)}
+            disabled={!selectedCategory}
+          >
+            <option value="">{selectedCategory ? 'Selecciona una opción' : 'Primero elegí una categoría'}</option>
+            {subcategoryOptions.map(item => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div style={{ marginBottom: 24 }}>
           <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>FECHA</label>

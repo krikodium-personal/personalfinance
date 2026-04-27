@@ -40,12 +40,29 @@ export default function App() {
   const [budgets, setBudgets] = useState<Record<string, number>>({});
   const [categories, setCategories] = useLocalStorageState<Category[]>(
     'finanzas_budget_categories',
-    CATEGORIES.filter(category => category.id !== 'other'),
+    CATEGORIES,
   );
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' } | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showTweaks, setShowTweaks] = useState(false);
+  const CATEGORY_MIGRATION_KEY = 'finanzas_categories_migration_v2_applied';
+
+  useEffect(() => {
+    const migrationDone = window.localStorage.getItem(CATEGORY_MIGRATION_KEY) === '1';
+    if (!migrationDone) {
+      setCategories(CATEGORIES);
+      window.localStorage.setItem(CATEGORY_MIGRATION_KEY, '1');
+      return;
+    }
+
+    setCategories(prev =>
+      prev.map(category => ({
+        ...category,
+        subcategories: Array.isArray(category.subcategories) ? category.subcategories : [],
+      })),
+    );
+  }, [setCategories]);
 
   useEditMode(() => setShowTweaks(true), () => setShowTweaks(false));
 

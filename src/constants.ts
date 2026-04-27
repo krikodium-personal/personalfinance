@@ -1,16 +1,18 @@
 import type { Category } from './types';
 
 export const CATEGORIES: Category[] = [
-  { id: 'food',      label: 'Comida',       icon: '🍽', color: '#e07b54' },
-  { id: 'transport', label: 'Transporte',   icon: '🚗', color: '#5b8dee' },
-  { id: 'housing',   label: 'Vivienda',     icon: '🏠', color: '#7c6fcd' },
-  { id: 'health',    label: 'Salud',        icon: '💊', color: '#4caf8a' },
-  { id: 'entertain', label: 'Entretenim.',  icon: '🎬', color: '#f2a93b' },
-  { id: 'clothing',  label: 'Ropa',         icon: '👗', color: '#e06b9a' },
-  { id: 'grocery',   label: 'Supermercado', icon: '🛒', color: '#6fba6f' },
-  { id: 'services',  label: 'Servicios',    icon: '⚡', color: '#f5c842' },
-  { id: 'education', label: 'Educación',    icon: '📚', color: '#5eafc7' },
-  { id: 'other',     label: 'Otras',        icon: '📦', color: '#a0a0a0' },
+  { id: 'comida', label: 'Comida', icon: '🍽', color: '#e07b54', subcategories: ['Verdulería', 'Carnicería', 'Milanesas', 'Super', 'Almacén'] },
+  { id: 'visa', label: 'Visa', icon: '💳', color: '#4f8ef7', subcategories: [] },
+  { id: 'amex', label: 'Amex', icon: '💳', color: '#6ba9ff', subcategories: [] },
+  { id: 'tenis', label: 'Tenis', icon: '🎾', color: '#4caf8a', subcategories: ['Flavio', 'Encordado', 'Torneos', 'Pelotas'] },
+  { id: 'casa-102', label: 'Casa 102', icon: '🏠', color: '#7c6fcd', subcategories: [] },
+  { id: 'casa-116', label: 'Casa 116', icon: '🏡', color: '#9a83d8', subcategories: [] },
+  { id: 'auto', label: 'Auto', icon: '🚗', color: '#5b8dee', subcategories: [] },
+  { id: 'monotributo', label: 'Monotributo', icon: '🧾', color: '#f2a93b', subcategories: [] },
+  { id: 'piti', label: 'Piti', icon: '🧴', color: '#e06b9a', subcategories: ['Librería', 'Remis', 'Semanalidad', 'Salidas', 'Depilación'] },
+  { id: 'servicios', label: 'Servicios', icon: '⚡', color: '#f5c842', subcategories: [] },
+  { id: 'salidas', label: 'Salidas', icon: '🍻', color: '#5eafc7', subcategories: [] },
+  { id: 'regalos', label: 'Regalos', icon: '🎁', color: '#a0a0a0', subcategories: [] },
 ];
 
 export const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];

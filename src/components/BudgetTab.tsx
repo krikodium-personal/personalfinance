@@ -30,6 +30,7 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
   const [budgetValue, setBudgetValue] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('📁');
+  const [newSubcategoryById, setNewSubcategoryById] = useState<Record<string, string>>({});
 
   const [renameModalCategoryId, setRenameModalCategoryId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -88,11 +89,26 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
         label,
         icon: newCategoryIcon.trim() || '📁',
         color: '#a0a0a0',
+        subcategories: [],
       },
     ]);
 
     setNewCategoryName('');
     setNewCategoryIcon('📁');
+  };
+
+  const handleAddSubcategory = (catId: string) => {
+    const raw = (newSubcategoryById[catId] || '').trim();
+    if (!raw) return;
+
+    setCategories(prev =>
+      prev.map(category => {
+        if (category.id !== catId) return category;
+        if (category.subcategories.some(sub => sub.toLowerCase() === raw.toLowerCase())) return category;
+        return { ...category, subcategories: [...category.subcategories, raw] };
+      }),
+    );
+    setNewSubcategoryById(prev => ({ ...prev, [catId]: '' }));
   };
 
   const renameTarget = categories.find(category => category.id === renameModalCategoryId) || null;
@@ -196,6 +212,36 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
                   <div style={{ height: '100%', borderRadius: 4, background: over ? '#e05555' : accent, width: `${pct * 100}%`, transition: 'width 0.5s' }} />
                 </div>
               )}
+
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: t.textSecondary, marginBottom: 6 }}>Subcategorías</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                  {category.subcategories.length > 0 ? (
+                    category.subcategories.map(sub => (
+                      <span key={sub} style={{ fontSize: 11, color: t.text, background: t.inputBg, border: `1px solid ${t.border}`, borderRadius: 999, padding: '3px 8px' }}>
+                        {sub}
+                      </span>
+                    ))
+                  ) : (
+                    <span style={{ fontSize: 11, color: t.textSecondary }}>Sin subcategorías</span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    value={newSubcategoryById[category.id] || ''}
+                    onChange={event => setNewSubcategoryById(prev => ({ ...prev, [category.id]: event.target.value }))}
+                    onKeyDown={event => event.key === 'Enter' && handleAddSubcategory(category.id)}
+                    placeholder="Nueva subcategoría"
+                    style={{ flex: 1, fontSize: 12, padding: '6px 8px', border: `1px solid ${t.border}`, borderRadius: 8, background: t.inputBg, color: t.text, outline: 'none' }}
+                  />
+                  <button
+                    onClick={() => handleAddSubcategory(category.id)}
+                    style={{ padding: '6px 10px', background: accent, color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12 }}
+                  >
+                    Agregar
+                  </button>
+                </div>
+              </div>
             </div>
           );
         })}

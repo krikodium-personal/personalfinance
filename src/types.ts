@@ -17,6 +17,7 @@ export interface Category {
   label: string;
   icon: string;
   color: string;
+  subcategories: string[];
 }
 
 export interface Tweaks {
