@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AddModal } from './components/AddModal';
 import { AuthScreen } from './components/AuthScreen';
+import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { BudgetTab } from './components/BudgetTab';
 import { ConverterTab } from './components/ConverterTab';
 import { HomeTab } from './components/HomeTab';
@@ -55,7 +56,7 @@ const normalizeCategories = (items: unknown): Category[] => {
 };
 
 export default function App() {
-  const { user, loading: authLoading, signIn, signUp, signOut } = useAuth();
+  const { user, loading: authLoading, passwordRecovery, signIn, signUp, resetPasswordForEmail, updatePassword, signOut } = useAuth();
   const [tweaks, setTweaks] = useLocalStorageState<Tweaks>('finanzas_tweaks', { ...TWEAK_DEFAULTS });
   const [tab, setTab] = useLocalStorageState<TabId>('finanzas_tab', 'home');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -255,6 +256,24 @@ export default function App() {
           }}
           onSignUp={async (email, password) => {
             const { error } = await signUp(email, password);
+            return { error: error?.message || null };
+          }}
+          onResetPassword={async email => {
+            const { error } = await resetPasswordForEmail(email);
+            return { error: error?.message || null };
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (passwordRecovery && user) {
+    return (
+      <div style={{ width: '100%', minHeight: '100vh', display: 'flex', justifyContent: 'center', background: '#fdf6ee' }}>
+        <ResetPasswordScreen
+          onSubmit={async password => {
+            const { error } = await updatePassword(password);
+            if (!error) await signOut();
             return { error: error?.message || null };
           }}
         />
