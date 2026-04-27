@@ -32,6 +32,26 @@ const rowToTx = (r: {
   date: r.date,
 });
 
+const normalizeCategories = (items: unknown): Category[] => {
+  if (!Array.isArray(items)) return CATEGORIES;
+  return items
+    .map((item, idx) => {
+      if (!item || typeof item !== 'object') return null;
+      const raw = item as Partial<Category>;
+      const fallback = CATEGORIES[idx % CATEGORIES.length];
+      return {
+        id: typeof raw.id === 'string' && raw.id ? raw.id : `${fallback.id}-${idx}`,
+        label: typeof raw.label === 'string' && raw.label ? raw.label : fallback.label,
+        icon: typeof raw.icon === 'string' && raw.icon ? raw.icon : fallback.icon,
+        color: typeof raw.color === 'string' && raw.color ? raw.color : fallback.color,
+        subcategories: Array.isArray(raw.subcategories)
+          ? raw.subcategories.filter((sub): sub is string => typeof sub === 'string' && sub.trim().length > 0)
+          : [],
+      };
+    })
+    .filter((item): item is Category => item !== null);
+};
+
 export default function App() {
   const { user, loading: authLoading, signIn, signUp, signOut } = useAuth();
   const [tweaks, setTweaks] = useLocalStorageState<Tweaks>('finanzas_tweaks', { ...TWEAK_DEFAULTS });
@@ -47,6 +67,7 @@ export default function App() {
   const [showAdd, setShowAdd] = useState(false);
   const [showTweaks, setShowTweaks] = useState(false);
   const CATEGORY_MIGRATION_KEY = 'finanzas_categories_migration_v2_applied';
+  const [categoriesLoadedFromDb, setCategoriesLoadedFromDb] = useState(false);
 
   useEffect(() => {
     const migrationDone = window.localStorage.getItem(CATEGORY_MIGRATION_KEY) === '1';
@@ -56,12 +77,7 @@ export default function App() {
       return;
     }
 
-    setCategories(prev =>
-      prev.map(category => ({
-        ...category,
-        subcategories: Array.isArray(category.subcategories) ? category.subcategories : [],
-      })),
-    );
+    setCategories(prev => normalizeCategories(prev));
   }, [setCategories]);
 
   useEditMode(() => setShowTweaks(true), () => setShowTweaks(false));
@@ -97,12 +113,49 @@ export default function App() {
     }
   }, []);
 
+  const loadCategories = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('user_categories')
+      .select('categories')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      showToast('No se pudieron cargar categorías desde Supabase. Se usan las locales.', 'error');
+      setCategoriesLoadedFromDb(true);
+      return;
+    }
+
+    if (data?.categories) {
+      setCategories(normalizeCategories(data.categories));
+    }
+    setCategoriesLoadedFromDb(true);
+  }, [user, setCategories]);
+
   useEffect(() => {
     if (user) {
+      setCategoriesLoadedFromDb(false);
       loadTransactions();
       loadBudgets();
+      loadCategories();
     }
-  }, [user, loadTransactions, loadBudgets]);
+  }, [user, loadTransactions, loadBudgets, loadCategories]);
+
+  useEffect(() => {
+    if (!user || !categoriesLoadedFromDb) return;
+    const syncCategories = async () => {
+      const { error } = await supabase.from('user_categories').upsert({
+        user_id: user.id,
+        categories,
+        updated_at: new Date().toISOString(),
+      });
+      if (error) {
+        showToast('No se pudieron guardar categorías en Supabase.', 'error');
+      }
+    };
+    void syncCategories();
+  }, [user, categoriesLoadedFromDb, categories]);
 
   const addTransaction = async (tx: Omit<Transaction, 'id'>): Promise<{ ok: boolean; error?: string }> => {
     if (!user) return { ok: false, error: 'Sesión inválida. Volvé a iniciar sesión.' };
@@ -155,6 +208,7 @@ export default function App() {
     await signOut();
     setTransactions([]);
     setBudgets({});
+    setCategoriesLoadedFromDb(false);
   };
 
   if (authLoading) {

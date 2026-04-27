@@ -111,6 +111,18 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
     setNewSubcategoryById(prev => ({ ...prev, [catId]: '' }));
   };
 
+  const handleDeleteSubcategory = (catId: string, subLabel: string) => {
+    setCategories(prev =>
+      prev.map(category => {
+        if (category.id !== catId) return category;
+        return {
+          ...category,
+          subcategories: category.subcategories.filter(sub => sub !== subLabel),
+        };
+      }),
+    );
+  };
+
   const renameTarget = categories.find(category => category.id === renameModalCategoryId) || null;
   const deleteTarget = categories.find(category => category.id === deleteModalCategoryId) || null;
 
@@ -218,8 +230,29 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                   {category.subcategories.length > 0 ? (
                     category.subcategories.map(sub => (
-                      <span key={sub} style={{ fontSize: 11, color: t.text, background: t.inputBg, border: `1px solid ${t.border}`, borderRadius: 999, padding: '3px 8px' }}>
+                      <span
+                        key={sub}
+                        style={{
+                          fontSize: 11,
+                          color: t.text,
+                          background: t.inputBg,
+                          border: `1px solid ${t.border}`,
+                          borderRadius: 999,
+                          padding: '2px 6px 2px 8px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
                         {sub}
+                        <button
+                          onClick={() => handleDeleteSubcategory(category.id, sub)}
+                          style={{ border: 'none', background: 'transparent', color: t.textSecondary, cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center' }}
+                          aria-label={`Borrar subcategoría ${sub}`}
+                          title="Borrar subcategoría"
+                        >
+                          <Icon name="x" size={11} color={t.textSecondary} />
+                        </button>
                       </span>
                     ))
                   ) : (

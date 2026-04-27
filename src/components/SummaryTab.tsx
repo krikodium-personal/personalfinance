@@ -36,11 +36,60 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
     return tx.type === 'expense' && tx.currency !== 'USD' && d.getMonth() === selectedMonthData.month && d.getFullYear() === selectedMonthData.year;
   });
 
-  const byCat = categories.map(c => ({
-    label: c.label,
-    color: c.color,
-    value: curMonth.filter(tx => tx.category === c.id).reduce((s, tx) => s + tx.amount, 0),
-  })).filter(d => d.value > 0);
+  const byCat = categories
+    .map(c => {
+      const txByCategory = curMonth.filter(tx => tx.category === c.id);
+      const value = txByCategory.reduce((s, tx) => s + tx.amount, 0);
+      const bySubMap = new Map<string, number>();
 
-  return <div style={{ padding: '16px 16px 0' }}><div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 12 }}>GASTOS ARS — ÚLTIMOS 6 MESES</div><div style={{ background: t.card, borderRadius: radius, padding: 20, marginBottom: 16 }}><BarChart monthlyData={monthlyData} accent={accent} selectedIndex={selectedMonthIndex} onSelect={setSelectedMonthIndex} /></div><div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 12 }}>{`DISTRIBUCIÓN ${selectedMonthData.label.toUpperCase()} ${selectedMonthData.year}`}</div><div style={{ background: t.card, borderRadius: radius, padding: 20, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'center' }}><DonutChart data={byCat} size={320} /><div style={{ width: '100%', maxWidth: 540, display: 'flex', flexDirection: 'column', gap: 10 }}>{byCat.slice(0, 5).map(d => <div key={d.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}><div style={{ width: 10, height: 10, borderRadius: 5, background: d.color }} /><span style={{ fontSize: 14, color: t.textSecondary, flex: 1 }}>{d.label}</span><span style={{ fontSize: 15, fontWeight: 600, color: t.text }}>{fmt(d.value)}</span></div>)}{byCat.length > 5 && <span style={{ fontSize: 12, color: t.textSecondary }}>+{byCat.length - 5} más</span>}{byCat.length === 0 && <span style={{ fontSize: 13, color: t.textSecondary }}>Sin datos</span>}</div></div></div>;
+      txByCategory.forEach(tx => {
+        const key = tx.desc?.trim() || 'Sin subcategoría';
+        bySubMap.set(key, (bySubMap.get(key) || 0) + tx.amount);
+      });
+
+      const subcategories = Array.from(bySubMap.entries())
+        .map(([label, amount]) => ({ label, amount }))
+        .sort((a, b) => b.amount - a.amount);
+
+      return {
+        label: c.label,
+        color: c.color,
+        value,
+        subcategories,
+      };
+    })
+    .filter(d => d.value > 0);
+
+  return (
+    <div style={{ padding: '16px 16px 0' }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 12 }}>GASTOS ARS — ÚLTIMOS 6 MESES</div>
+      <div style={{ background: t.card, borderRadius: radius, padding: 20, marginBottom: 16 }}>
+        <BarChart monthlyData={monthlyData} accent={accent} selectedIndex={selectedMonthIndex} onSelect={setSelectedMonthIndex} />
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 12 }}>{`DISTRIBUCIÓN ${selectedMonthData.label.toUpperCase()} ${selectedMonthData.year}`}</div>
+      <div style={{ background: t.card, borderRadius: radius, padding: 20, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'center' }}>
+        <DonutChart data={byCat} size={320} />
+        <div style={{ width: '100%', maxWidth: 540, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {byCat.map(categoryItem => (
+            <div key={categoryItem.label} style={{ borderBottom: `1px solid ${t.border}`, paddingBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 10, height: 10, borderRadius: 5, background: categoryItem.color }} />
+                <span style={{ fontSize: 14, color: t.textSecondary, flex: 1 }}>{categoryItem.label}</span>
+                <span style={{ fontSize: 15, fontWeight: 600, color: t.text }}>{fmt(categoryItem.value)}</span>
+              </div>
+              <div style={{ marginTop: 6, marginLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {categoryItem.subcategories.map(sub => (
+                  <div key={`${categoryItem.label}-${sub.label}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 12, color: t.textSecondary, flex: 1 }}>{sub.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: t.textSecondary }}>{fmt(sub.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          {byCat.length === 0 && <span style={{ fontSize: 13, color: t.textSecondary }}>Sin datos</span>}
+        </div>
+      </div>
+    </div>
+  );
 }

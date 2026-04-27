@@ -18,7 +18,6 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
   const [subcategory, setSubcategory] = useState('');
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [showCats, setShowCats] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -179,70 +178,25 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
           </div>
         </div>
 
-        <div style={{ marginBottom: 14, position: 'relative' }}>
+        <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
             CATEGORÍA <span style={{ color: '#dc2626' }}>*</span>
           </label>
-          <button
-            onClick={() => setShowCats(!showCats)}
-            style={{
-              ...inputStyle,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-              textAlign: 'left',
-              border: `1.5px solid ${showCats ? accent : t.border}`,
+          <select
+            style={inputStyle}
+            value={category}
+            onChange={e => {
+              setCategory(e.target.value);
+              setSubcategory('');
             }}
           >
-            <span>
-              {selectedCategory ? `${selectedCategory.icon} ${selectedCategory.label}` : 'Selecciona una opción'}
-            </span>
-            <Icon name="chevronDown" size={16} color={t.textSecondary} />
-          </button>
-
-          {showCats && (
-            <div
-              style={{
-                position: 'absolute',
-                bottom: 'calc(100% + 8px)',
-                left: 0,
-                right: 0,
-                background: t.card,
-                border: `1px solid ${t.border}`,
-                borderRadius: radius * 0.6,
-                zIndex: 20,
-                boxShadow: t.shadow,
-                maxHeight: 220,
-                overflowY: 'auto',
-              }}
-            >
-              {categories.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => {
-                    setCategory(c.id);
-                    setSubcategory('');
-                    setShowCats(false);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '11px 14px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    color: t.text,
-                    fontSize: 14,
-                    background: category === c.id ? t.cardAlt : 'transparent',
-                  }}
-                >
-                  <span style={{ fontSize: 18 }}>{c.icon}</span> {c.label}
-                </button>
-              ))}
-            </div>
-          )}
+            <option value="">Selecciona una opción</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>
+                {`${c.icon} ${c.label}`}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div style={{ marginBottom: 14 }}>
