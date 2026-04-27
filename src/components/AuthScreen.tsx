@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Spinner } from './ui';
+import { useState, type CSSProperties } from 'react';
+import { Icon, Spinner } from './ui';
 
 interface AuthScreenProps {
   onSignIn: (email: string, password: string) => Promise<{ user: { id: string } | null; error: string | null }>;
@@ -14,7 +14,21 @@ export function AuthScreen({ onSignIn, onSignUp, onResetPassword }: AuthScreenPr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const accent = '#1a7a5e';
+
+  const inputBase: CSSProperties = {
+    width: '100%',
+    padding: '13px 44px 13px 16px',
+    border: '1.5px solid #f0e4d4',
+    borderRadius: 12,
+    background: '#fdf6ee',
+    color: '#2d1f0e',
+    fontSize: 15,
+    outline: 'none',
+    marginBottom: 12,
+    boxSizing: 'border-box',
+  };
 
   const submit = async () => {
     setError('');
@@ -40,7 +54,7 @@ export function AuthScreen({ onSignIn, onSignUp, onResetPassword }: AuthScreenPr
   return (
     <div style={{ width: '100%', maxWidth: 440, minHeight: '100vh', background: '#fdf6ee', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', margin: '0 auto' }}>
       <div style={{ width: 64, height: 64, background: accent, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, fontSize: 28 }}>💰</div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: '#2d1f0e', marginBottom: 6 }}>Mis Finanzas</div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: '#2d1f0e', marginBottom: 6 }}>Pekri Finanzas</div>
       <div style={{ fontSize: 14, color: '#8a7060', marginBottom: 36 }}>
         {mode === 'login' ? 'Iniciá sesión para continuar' : mode === 'signup' ? 'Creá tu cuenta gratis' : 'Te enviamos un enlace para restablecer la contraseña'}
       </div>
@@ -55,7 +69,37 @@ export function AuthScreen({ onSignIn, onSignUp, onResetPassword }: AuthScreenPr
 
       <input style={{ width: '100%', padding: '13px 16px', border: '1.5px solid #f0e4d4', borderRadius: 12, background: '#fdf6ee', color: '#2d1f0e', fontSize: 15, outline: 'none', marginBottom: 12 }} type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
       {mode !== 'forgot' && (
-        <input style={{ width: '100%', padding: '13px 16px', border: '1.5px solid #f0e4d4', borderRadius: 12, background: '#fdf6ee', color: '#2d1f0e', fontSize: 15, outline: 'none', marginBottom: 12 }} type="password" placeholder="Contraseña (mín. 6 caracteres)" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
+        <div style={{ position: 'relative', width: '100%', marginBottom: 12 }}>
+          <input
+            style={{ ...inputBase, marginBottom: 0 }}
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Contraseña (mín. 6 caracteres)"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && submit()}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(v => !v)}
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            style={{
+              position: 'absolute',
+              right: 10,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#8a7060',
+            }}
+          >
+            <Icon name={showPassword ? 'eyeOff' : 'eye'} size={20} color="currentColor" />
+          </button>
+        </div>
       )}
       {mode === 'login' && (
         <button

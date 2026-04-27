@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Spinner } from './ui';
+import { useState, type CSSProperties } from 'react';
+import { Icon, Spinner } from './ui';
 
 interface ResetPasswordScreenProps {
   onSubmit: (password: string) => Promise<{ error: string | null }>;
@@ -11,7 +11,22 @@ export function ResetPasswordScreen({ onSubmit }: ResetPasswordScreenProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const accent = '#1a7a5e';
+
+  const inputBase: CSSProperties = {
+    width: '100%',
+    padding: '13px 44px 13px 16px',
+    border: '1.5px solid #f0e4d4',
+    borderRadius: 12,
+    background: '#fdf6ee',
+    color: '#2d1f0e',
+    fontSize: 15,
+    outline: 'none',
+    marginBottom: 12,
+    boxSizing: 'border-box',
+  };
 
   const submit = async () => {
     setError('');
@@ -37,22 +52,68 @@ export function ResetPasswordScreen({ onSubmit }: ResetPasswordScreenProps) {
       <div style={{ fontSize: 24, fontWeight: 700, color: '#2d1f0e', marginBottom: 6 }}>Nueva contraseña</div>
       <div style={{ fontSize: 14, color: '#8a7060', marginBottom: 28, textAlign: 'center' }}>Definí una nueva contraseña para tu cuenta.</div>
 
-      <input
-        style={{ width: '100%', padding: '13px 16px', border: '1.5px solid #f0e4d4', borderRadius: 12, background: '#fdf6ee', color: '#2d1f0e', fontSize: 15, outline: 'none', marginBottom: 12 }}
-        type="password"
-        placeholder="Nueva contraseña (mín. 6 caracteres)"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && submit()}
-      />
-      <input
-        style={{ width: '100%', padding: '13px 16px', border: '1.5px solid #f0e4d4', borderRadius: 12, background: '#fdf6ee', color: '#2d1f0e', fontSize: 15, outline: 'none', marginBottom: 12 }}
-        type="password"
-        placeholder="Repetir contraseña"
-        value={confirm}
-        onChange={e => setConfirm(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && submit()}
-      />
+      <div style={{ position: 'relative', width: '100%', marginBottom: 12 }}>
+        <input
+          style={{ ...inputBase, marginBottom: 0 }}
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Nueva contraseña (mín. 6 caracteres)"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && submit()}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(v => !v)}
+          aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+          style={{
+            position: 'absolute',
+            right: 10,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 4,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#8a7060',
+          }}
+        >
+          <Icon name={showPassword ? 'eyeOff' : 'eye'} size={20} color="currentColor" />
+        </button>
+      </div>
+      <div style={{ position: 'relative', width: '100%', marginBottom: 12 }}>
+        <input
+          style={{ ...inputBase, marginBottom: 0 }}
+          type={showConfirm ? 'text' : 'password'}
+          placeholder="Repetir contraseña"
+          value={confirm}
+          onChange={e => setConfirm(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && submit()}
+        />
+        <button
+          type="button"
+          onClick={() => setShowConfirm(v => !v)}
+          aria-label={showConfirm ? 'Ocultar repetición' : 'Mostrar repetición'}
+          style={{
+            position: 'absolute',
+            right: 10,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 4,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#8a7060',
+          }}
+        >
+          <Icon name={showConfirm ? 'eyeOff' : 'eye'} size={20} color="currentColor" />
+        </button>
+      </div>
 
       {error && <div style={{ width: '100%', padding: '10px 14px', background: '#fde8e8', borderRadius: 10, fontSize: 13, color: '#c0392b', marginBottom: 12 }}>{error}</div>}
       {success && <div style={{ width: '100%', padding: '10px 14px', background: '#e8f5f0', borderRadius: 10, fontSize: 13, color: accent, marginBottom: 12 }}>{success}</div>}

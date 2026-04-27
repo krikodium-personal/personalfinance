@@ -295,7 +295,7 @@ export default function App() {
         <div style={{ padding: '0 20px 16px', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: t.text }}>Mis Finanzas</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: t.text }}>Pekri Finanzas</div>
               <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 2 }}>{user.email}</div>
             </div>
             <button onClick={logout} style={{ background: 'none', border: `1px solid ${t.border}`, borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontSize: 12, color: t.textSecondary }}>Salir</button>
