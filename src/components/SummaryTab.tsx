@@ -43,7 +43,8 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
       const bySubMap = new Map<string, number>();
 
       txByCategory.forEach(tx => {
-        const key = tx.desc?.trim() || 'Sin subcategoría';
+        const rawDescription = tx.desc?.trim() || '';
+        const key = rawDescription.split(' · ')[0]?.trim() || 'Sin subcategoría';
         bySubMap.set(key, (bySubMap.get(key) || 0) + tx.amount);
       });
 

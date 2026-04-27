@@ -159,7 +159,7 @@ export default function App() {
 
   const addTransaction = async (tx: Omit<Transaction, 'id'>): Promise<{ ok: boolean; error?: string }> => {
     if (!user) return { ok: false, error: 'Sesión inválida. Volvé a iniciar sesión.' };
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('transactions')
       .insert([
         {
@@ -171,17 +171,15 @@ export default function App() {
           date: tx.date,
           user_id: user.id,
         },
-      ])
-      .select()
-      .single();
+      ]);
 
     if (error) {
       showToast(`Error al guardar: ${error.message}`, 'error');
       return { ok: false, error: error.message };
     }
 
-    setTransactions(prev => [rowToTx(data), ...prev]);
-    showToast('Transacción guardada ✓');
+    await loadTransactions();
+    showToast('Transacción guardada y lista actualizada ✓');
     return { ok: true };
   };
 

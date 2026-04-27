@@ -16,6 +16,7 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState<Currency>('ARS');
   const [subcategory, setSubcategory] = useState('');
+  const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
@@ -70,12 +71,13 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
     }
 
     setSaving(true);
+    const composedDescription = description.trim() ? `${subcategory} · ${description.trim()}` : subcategory;
     const result = await onAdd({
       type,
       category,
       amount: num,
       currency,
-      desc: subcategory,
+      desc: composedDescription,
       date: new Date(date).toISOString(),
     });
     setSaving(false);
@@ -88,6 +90,7 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
 
   return (
     <div
+      onClick={onClose}
       style={{
         position: 'fixed',
         inset: 0,
@@ -101,6 +104,7 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
       }}
     >
       <div
+        onClick={e => e.stopPropagation()}
         style={{
           width: '100%',
           maxWidth: 390,
@@ -216,6 +220,17 @@ export function AddModal({ onClose, onAdd, categories, t, accent, radius }: AddM
               </option>
             ))}
           </select>
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>DESCRIPCIÓN</label>
+          <input
+            style={inputStyle}
+            type="text"
+            placeholder="Detalle opcional"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+          />
         </div>
 
         <div style={{ marginBottom: 24 }}>

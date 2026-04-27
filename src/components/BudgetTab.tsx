@@ -36,6 +36,8 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
   const [renameValue, setRenameValue] = useState('');
   const [renameIconValue, setRenameIconValue] = useState('');
   const [deleteModalCategoryId, setDeleteModalCategoryId] = useState<string | null>(null);
+  const [draggingCategoryId, setDraggingCategoryId] = useState<string | null>(null);
+  const [dragOverCategoryId, setDragOverCategoryId] = useState<string | null>(null);
 
   const currentExpenses = transactions.filter(tx => {
     const d = new Date(tx.date);
@@ -123,13 +125,26 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
     );
   };
 
+  const handleReorderCategories = (fromId: string, toId: string) => {
+    if (!fromId || !toId || fromId === toId) return;
+    setCategories(prev => {
+      const fromIndex = prev.findIndex(category => category.id === fromId);
+      const toIndex = prev.findIndex(category => category.id === toId);
+      if (fromIndex < 0 || toIndex < 0) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  };
+
   const renameTarget = categories.find(category => category.id === renameModalCategoryId) || null;
   const deleteTarget = categories.find(category => category.id === deleteModalCategoryId) || null;
 
   return (
     <div style={{ padding: '16px 16px 0' }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 4 }}>PRESUPUESTO MENSUAL (ARS)</div>
-      <div style={{ fontSize: 12, color: t.textSecondary, marginBottom: 12 }}>Podés crear, renombrar y borrar categorías</div>
+      <div style={{ fontSize: 12, color: t.textSecondary, marginBottom: 12 }}>Podés crear, renombrar, borrar y reordenar categorías con drag & drop</div>
 
       <div style={{ background: t.card, borderRadius: radius * 0.75, padding: '12px 14px', marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 8 }}>Nueva categoría</div>
@@ -160,7 +175,48 @@ export function BudgetTab({ transactions, budgets, categories, setCategories, on
           const over = spent > budget && budget > 0;
 
           return (
-            <div key={category.id} style={{ background: t.card, borderRadius: radius * 0.75, padding: '14px 16px' }}>
+            <div
+              key={category.id}
+              draggable
+              onDragStart={() => {
+                setDraggingCategoryId(category.id);
+                setDragOverCategoryId(category.id);
+              }}
+              onDragOver={event => {
+                event.preventDefault();
+                if (dragOverCategoryId !== category.id) {
+                  setDragOverCategoryId(category.id);
+                }
+              }}
+              onDragLeave={() => {
+                if (dragOverCategoryId === category.id) {
+                  setDragOverCategoryId(null);
+                }
+              }}
+              onDrop={event => {
+                event.preventDefault();
+                if (draggingCategoryId) {
+                  handleReorderCategories(draggingCategoryId, category.id);
+                }
+                setDraggingCategoryId(null);
+                setDragOverCategoryId(null);
+              }}
+              onDragEnd={() => {
+                setDraggingCategoryId(null);
+                setDragOverCategoryId(null);
+              }}
+              style={{
+                background: t.card,
+                borderRadius: radius * 0.75,
+                padding: '14px 16px',
+                border:
+                  dragOverCategoryId === category.id && draggingCategoryId && draggingCategoryId !== category.id
+                    ? `2px dashed ${accent}`
+                    : `2px solid transparent`,
+                opacity: draggingCategoryId === category.id ? 0.75 : 1,
+                cursor: 'grab',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: budget > 0 ? 10 : 0 }}>
                 <span style={{ fontSize: 20 }}>{category.icon}</span>
                 <div style={{ flex: 1 }}>
