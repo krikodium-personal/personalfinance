@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Category, Currency, ThemePalette, Transaction, TxType } from '../types';
-import { arsFromUsdSaleBlueMid, blueMid, fetchDolarHoyRates, type DollarRates } from '../lib/dolarRates';
+import { blueMid, fetchDolarHoyRates, type DollarRates } from '../lib/dolarRates';
 import { fmt, txDateToInputValue } from '../utils';
 import { Icon, Spinner } from './ui';
 
 type EntryMode = 'expense' | 'income' | 'dollar_sale';
+type DollarRateSource = 'dolarhoy_mid' | 'manual';
 
 interface AddModalProps {
   onClose: () => void;
@@ -13,6 +14,7 @@ interface AddModalProps {
   onSubmitDollarSale?: (payload: {
     usdAmount: number;
     arsAmount: number;
+    category: string;
     descExpenseUsd: string;
     descIncomeArs: string;
     date: string;
@@ -80,6 +82,8 @@ export function AddModal({
 
   const [usdSellAmount, setUsdSellAmount] = useState('');
   const [vendor, setVendor] = useState('');
+  const [dollarRateSource, setDollarRateSource] = useState<DollarRateSource>('dolarhoy_mid');
+  const [manualDollarRate, setManualDollarRate] = useState('');
   const [rates, setRates] = useState<DollarRates | null>(null);
   const [ratesLoading, setRatesLoading] = useState(false);
   const [ratesError, setRatesError] = useState('');
@@ -139,10 +143,22 @@ export function AddModal({
     return Number.isFinite(n) && n > 0 ? n : 0;
   }, [usdSellAmount]);
 
+  const manualRateNumeric = useMemo(() => {
+    const normalized = manualDollarRate.replace(/\./g, '').replace(',', '.');
+    const n = Number(normalized);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }, [manualDollarRate]);
+
+  const selectedDollarRate = useMemo(() => {
+    if (dollarRateSource === 'manual') return manualRateNumeric;
+    if (!rates) return 0;
+    return blueMid(rates.blue);
+  }, [dollarRateSource, manualRateNumeric, rates]);
+
   const arsFromSale = useMemo(() => {
-    if (!rates || usdNumeric <= 0) return 0;
-    return Math.round(arsFromUsdSaleBlueMid(usdNumeric, rates.blue) * 100) / 100;
-  }, [rates, usdNumeric]);
+    if (usdNumeric <= 0 || selectedDollarRate <= 0) return 0;
+    return Math.round(usdNumeric * selectedDollarRate * 100) / 100;
+  }, [selectedDollarRate, usdNumeric]);
 
   const syncEntryModeToType = (mode: EntryMode) => {
     setEntryMode(mode);
@@ -177,11 +193,15 @@ export function AddModal({
       setFormError('Indicá a quién le vendiste.');
       return;
     }
-    if (!rates) {
+    if (dollarRateSource === 'dolarhoy_mid' && !rates) {
       setFormError('No hay cotización del dólar blue. Probá actualizar o intentá más tarde.');
       return;
     }
-    const arsAmount = Math.round(arsFromUsdSaleBlueMid(usdNumeric, rates.blue) * 100) / 100;
+    if (dollarRateSource === 'manual' && manualRateNumeric <= 0) {
+      setFormError('Ingresá un tipo de cambio manual válido mayor a 0.');
+      return;
+    }
+    const arsAmount = Math.round(usdNumeric * selectedDollarRate * 100) / 100;
     if (arsAmount <= 0) {
       setFormError('El monto en pesos no es válido.');
       return;
@@ -194,6 +214,7 @@ export function AddModal({
     const result = await onSubmitDollarSale({
       usdAmount: usdNumeric,
       arsAmount,
+      category,
       descExpenseUsd,
       descIncomeArs,
       date: toStoredIsoDate(date),
@@ -355,15 +376,90 @@ export function AddModal({
                   </button>
                 </div>
               )}
-              {!ratesLoading && rates && usdNumeric > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
+                  Tipo de cambio
+                </label>
+                <div style={{ display: 'flex', background: t.inputBg, borderRadius: radius * 0.6, padding: 3, marginBottom: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setDollarRateSource('dolarhoy_mid')}
+                    style={{
+                      flex: 1,
+                      padding: '8px 10px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      borderRadius: radius * 0.45,
+                      background: dollarRateSource === 'dolarhoy_mid' ? accent : 'transparent',
+                      color: dollarRateSource === 'dolarhoy_mid' ? '#fff' : t.textSecondary,
+                    }}
+                  >
+                    DolarHoy (intermedio)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDollarRateSource('manual')}
+                    style={{
+                      flex: 1,
+                      padding: '8px 10px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      borderRadius: radius * 0.45,
+                      background: dollarRateSource === 'manual' ? accent : 'transparent',
+                      color: dollarRateSource === 'manual' ? '#fff' : t.textSecondary,
+                    }}
+                  >
+                    Manual
+                  </button>
+                </div>
+
+                {dollarRateSource === 'manual' && (
+                  <input
+                    style={inputStyle}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Ej: 1400"
+                    value={manualDollarRate}
+                    onChange={e => setManualDollarRate(formatAmountInput(e.target.value))}
+                  />
+                )}
+              </div>
+
+              {usdNumeric > 0 && selectedDollarRate > 0 && (
                 <div style={{ marginTop: 12, padding: '12px 14px', background: t.inputBg, borderRadius: radius * 0.6, border: `1px solid ${t.border}` }}>
-                  <div style={{ fontSize: 12, color: t.textSecondary, marginBottom: 4 }}>Equivale a (dólar blue intermedio)</div>
+                  <div style={{ fontSize: 12, color: t.textSecondary, marginBottom: 4 }}>
+                    Equivale a ({dollarRateSource === 'manual' ? 'tipo manual' : 'dólar blue intermedio'})
+                  </div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: t.text }}>{fmt(arsFromSale, 'ARS')}</div>
                   <div style={{ fontSize: 11, color: t.textSecondary, marginTop: 6 }}>
-                    Tipo intermedio: {fmt(blueMid(rates.blue), 'ARS')} por USD · Fuente: dolarhoy.com
+                    Tipo usado: {fmt(selectedDollarRate, 'ARS')} por USD
+                    {dollarRateSource === 'dolarhoy_mid' ? ' · Fuente: dolarhoy.com' : ''}
                   </div>
                 </div>
               )}
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>CATEGORÍA</label>
+              <select
+                style={inputStyle}
+                value={category}
+                onChange={e => {
+                  setCategory(e.target.value);
+                  setSubcategory('');
+                }}
+              >
+                <option value="">Usar categoría por defecto (Cambio USD)</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {`${c.icon} ${c.label}`}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div style={{ marginBottom: 14 }}>

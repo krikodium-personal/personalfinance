@@ -225,15 +225,17 @@ export default function App() {
   const addDollarSale = async (payload: {
     usdAmount: number;
     arsAmount: number;
+    category: string;
     descExpenseUsd: string;
     descIncomeArs: string;
     date: string;
   }): Promise<{ ok: boolean; error?: string }> => {
     if (!user) return { ok: false, error: 'Sesión inválida. Volvé a iniciar sesión.' };
+    const operationCategory = payload.category || DOLLAR_SALE_CATEGORY_ID;
     const { error } = await supabase.from('transactions').insert([
       {
         type: 'expense',
-        category: DOLLAR_SALE_CATEGORY_ID,
+        category: operationCategory,
         amount: payload.usdAmount,
         currency: 'USD',
         description: payload.descExpenseUsd,
@@ -242,7 +244,7 @@ export default function App() {
       },
       {
         type: 'income',
-        category: DOLLAR_SALE_CATEGORY_ID,
+        category: operationCategory,
         amount: payload.arsAmount,
         currency: 'ARS',
         description: payload.descIncomeArs,
