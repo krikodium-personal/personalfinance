@@ -196,14 +196,18 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
               </button>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 18, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
               <span style={{ fontSize: 13, fontWeight: 600, opacity: 0.85 }}>ARS</span>
-              <span style={{ fontSize: 36, fontWeight: 700, letterSpacing: -1 }}>{fmt(arsNet, 'ARS')}</span>
+              <span style={{ fontSize: 'clamp(21px, 6.2vw, 36px)', fontWeight: 700, letterSpacing: -1, whiteSpace: 'nowrap', lineHeight: 1.05 }}>
+                {fmt(arsNet, 'ARS')}
+              </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
               <span style={{ fontSize: 13, fontWeight: 600, opacity: 0.85 }}>USD</span>
-              <span style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.4 }}>{fmt(usdNet, 'USD')}</span>
+              <span style={{ fontSize: 'clamp(21px, 6.2vw, 36px)', fontWeight: 700, letterSpacing: -1, whiteSpace: 'nowrap', lineHeight: 1.05 }}>
+                {fmt(usdNet, 'USD')}
+              </span>
             </div>
           </div>
         </div>
