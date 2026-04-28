@@ -279,13 +279,14 @@ export default function App() {
     return { ok: true };
   };
 
-  const deleteTransaction = async (id: string) => {
-    const { error } = await supabase.from('transactions').delete().eq('id', id);
+  const deleteTransaction = async (idOrIds: string | string[]) => {
+    const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
+    const { error } = await supabase.from('transactions').delete().in('id', ids);
     if (error) {
       showToast('Error al eliminar', 'error');
       return;
     }
-    setTransactions(prev => prev.filter(tx => tx.id !== id));
+    setTransactions(prev => prev.filter(tx => !ids.includes(tx.id)));
   };
 
   const saveBudget = async (catId: string, amount: number) => {

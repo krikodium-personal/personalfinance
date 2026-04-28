@@ -11,16 +11,37 @@ interface HomeTabProps {
   t: ThemePalette;
   accent: string;
   radius: number;
-  onDelete: (id: string) => void;
+  onDelete: (id: string | string[]) => void;
   onEdit: (tx: Transaction) => void;
 }
 
 const fallbackCategory: Category = { id: 'other', label: 'Otras', icon: '📦', color: '#a0a0a0', subcategories: [] };
+const usdSaleExpensePrefix = 'Venta USD a ';
+const usdSaleIncomePrefix = 'Ingreso ARS por venta USD a ';
+
+type DisplayItem =
+  | { kind: 'single'; tx: Transaction }
+  | { kind: 'dollar_sale'; expenseUsd: Transaction; incomeArs: Transaction; vendor: string; timestamp: Date };
+
+const extractSaleVendor = (tx: Transaction): string | null => {
+  const firstSegment = (tx.desc || '').split(' · ')[0]?.trim() || '';
+  if (!firstSegment) return null;
+  if (firstSegment.startsWith(usdSaleIncomePrefix)) {
+    return firstSegment.slice(usdSaleIncomePrefix.length).trim() || null;
+  }
+  if (firstSegment.startsWith(usdSaleExpensePrefix)) {
+    return firstSegment.slice(usdSaleExpensePrefix.length).trim() || null;
+  }
+  return null;
+};
 
 export function HomeTab({ transactions, categories, loading, t, accent, radius, onDelete, onEdit }: HomeTabProps) {
   const now = new Date();
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [balanceView, setBalanceView] = useState<'monthly' | 'annual'>('monthly');
+  const [selectedDollarSale, setSelectedDollarSale] = useState<DisplayItem | null>(null);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(null);
+  const [pendingDeleteLabel, setPendingDeleteLabel] = useState('');
   const filterYear = now.getFullYear();
 
   const filtered = transactions.filter(tx => {
@@ -51,6 +72,63 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
     (a, b) =>
       new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime(),
   );
+
+  const displayItems: DisplayItem[] = [];
+  const usedTxIds = new Set<string>();
+
+  const askDelete = (ids: string[], label: string) => {
+    setPendingDeleteIds(ids);
+    setPendingDeleteLabel(label);
+  };
+
+  sorted.forEach(tx => {
+    if (usedTxIds.has(tx.id)) return;
+
+    const vendor = extractSaleVendor(tx);
+    if (!vendor) {
+      displayItems.push({ kind: 'single', tx });
+      usedTxIds.add(tx.id);
+      return;
+    }
+
+    const isExpenseUsd = tx.type === 'expense' && tx.currency === 'USD';
+    const isIncomeArs = tx.type === 'income' && tx.currency !== 'USD';
+    if (!isExpenseUsd && !isIncomeArs) {
+      displayItems.push({ kind: 'single', tx });
+      usedTxIds.add(tx.id);
+      return;
+    }
+
+    const pair = sorted.find(candidate => {
+      if (candidate.id === tx.id || usedTxIds.has(candidate.id)) return false;
+      if (candidate.date !== tx.date) return false;
+      if (extractSaleVendor(candidate) !== vendor) return false;
+      return (
+        (isExpenseUsd && candidate.type === 'income' && candidate.currency !== 'USD') ||
+        (isIncomeArs && candidate.type === 'expense' && candidate.currency === 'USD')
+      );
+    });
+
+    if (!pair) {
+      displayItems.push({ kind: 'single', tx });
+      usedTxIds.add(tx.id);
+      return;
+    }
+
+    const expenseUsd = isExpenseUsd ? tx : pair;
+    const incomeArs = isIncomeArs ? tx : pair;
+    const txDate = new Date(tx.createdAt || tx.date).getTime();
+    const pairDate = new Date(pair.createdAt || pair.date).getTime();
+    displayItems.push({
+      kind: 'dollar_sale',
+      expenseUsd,
+      incomeArs,
+      vendor,
+      timestamp: new Date(Math.max(txDate, pairDate)),
+    });
+    usedTxIds.add(tx.id);
+    usedTxIds.add(pair.id);
+  });
 
   return (
     <div style={{ padding: '0 16px' }}>
@@ -174,12 +252,64 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
         </div>
       )}
 
-      {!loading && sorted.length === 0 && (
+      {!loading && displayItems.length === 0 && (
         <div style={{ textAlign: 'center', color: t.textSecondary, padding: '40px 0', fontSize: 14 }}>No hay movimientos este mes</div>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {sorted.map(tx => {
+        {displayItems.map(item => {
+          if (item.kind === 'dollar_sale') {
+            const timestampLabel = `${item.timestamp.getDate()} ${MONTHS[item.timestamp.getMonth()]} ${item.timestamp.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
+            return (
+              <div
+                key={`${item.expenseUsd.id}-${item.incomeArs.id}`}
+                onClick={() => setSelectedDollarSale(item)}
+                style={{ background: t.card, borderRadius: radius * 0.75, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    background: '#166534',
+                  }}
+                >
+                  <Icon name="exchange" size={18} color="#fff" />
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: t.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Venta USD a {item.vendor}
+                  </div>
+                  <div style={{ marginTop: 2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>Operación cambio</span>
+                    <span style={{ fontSize: 12, color: t.textSecondary }}>· {timestampLabel}</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: accent }}>+{fmt(item.incomeArs.amount, 'ARS')}</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: t.text }}>-{fmt(item.expenseUsd.amount, 'USD')}</div>
+                  </div>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      askDelete([item.expenseUsd.id, item.incomeArs.id], `la operación “Venta USD a ${item.vendor}”`);
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textSecondary, opacity: 0.5 }}
+                  >
+                    <Icon name="trash" size={15} />
+                  </button>
+                </div>
+              </div>
+            );
+          }
+          const tx = item.tx;
           const cat =
             categories.find(category => category.id === tx.category) ||
             CATEGORIES.find(category => category.id === tx.category) ||
@@ -225,7 +355,7 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
                 <button
                   onClick={e => {
                     e.stopPropagation();
-                    onDelete(tx.id);
+                    askDelete([tx.id], 'este movimiento');
                   }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textSecondary, opacity: 0.5 }}
                 >
@@ -236,6 +366,96 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
           );
         })}
       </div>
+
+      {selectedDollarSale && selectedDollarSale.kind === 'dollar_sale' && (
+        <div
+          onClick={() => setSelectedDollarSale(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 120 }}
+        >
+          <div
+            onClick={event => event.stopPropagation()}
+            style={{ width: '100%', maxWidth: 390, margin: '0 12px 20px', background: t.card, borderRadius: radius, padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: t.text }}>Detalle venta de dólares</div>
+              <button onClick={() => setSelectedDollarSale(null)} style={{ border: 'none', background: 'none', color: t.textSecondary, cursor: 'pointer' }}>
+                <Icon name="x" size={20} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+              <span style={{ color: t.textSecondary }}>Comprador</span>
+              <span style={{ color: t.text, fontWeight: 600 }}>{selectedDollarSale.vendor}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+              <span style={{ color: t.textSecondary }}>USD vendidos</span>
+              <span style={{ color: t.text, fontWeight: 600 }}>{fmt(selectedDollarSale.expenseUsd.amount, 'USD')}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+              <span style={{ color: t.textSecondary }}>ARS recibidos</span>
+              <span style={{ color: accent, fontWeight: 700 }}>{fmt(selectedDollarSale.incomeArs.amount, 'ARS')}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+              <span style={{ color: t.textSecondary }}>Fecha</span>
+              <span style={{ color: t.text, fontWeight: 600 }}>
+                {new Date(selectedDollarSale.incomeArs.date).toLocaleDateString('es-AR')}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setSelectedDollarSale(null);
+                askDelete(
+                  [selectedDollarSale.expenseUsd.id, selectedDollarSale.incomeArs.id],
+                  `la operación “Venta USD a ${selectedDollarSale.vendor}”`,
+                );
+              }}
+              style={{ marginTop: 6, border: 'none', background: '#dc2626', color: '#fff', borderRadius: 10, padding: '10px 12px', cursor: 'pointer', fontWeight: 600 }}
+            >
+              Borrar operación completa
+            </button>
+          </div>
+        </div>
+      )}
+
+      {pendingDeleteIds && (
+        <div
+          onClick={() => {
+            setPendingDeleteIds(null);
+            setPendingDeleteLabel('');
+          }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 130 }}
+        >
+          <div
+            onClick={event => event.stopPropagation()}
+            style={{ width: '100%', maxWidth: 360, margin: '0 16px', background: t.card, borderRadius: radius * 0.75, padding: 16 }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 700, color: t.text, marginBottom: 8 }}>Confirmar borrado</div>
+            <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 14 }}>
+              ¿Seguro que querés borrar {pendingDeleteLabel || 'este elemento'}? Esta acción no se puede deshacer.
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                onClick={() => {
+                  setPendingDeleteIds(null);
+                  setPendingDeleteLabel('');
+                }}
+                style={{ border: 'none', background: t.inputBg, color: t.textSecondary, borderRadius: 8, padding: '7px 12px', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  onDelete(pendingDeleteIds);
+                  setPendingDeleteIds(null);
+                  setPendingDeleteLabel('');
+                }}
+                style={{ border: 'none', background: '#dc2626', color: '#fff', borderRadius: 8, padding: '7px 12px', cursor: 'pointer' }}
+              >
+                Borrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

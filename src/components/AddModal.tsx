@@ -229,7 +229,7 @@ export function AddModal({
     onClose();
   };
 
-  const toggleModes: EntryMode[] = isEdit ? ['expense', 'income'] : ['expense', 'income', 'dollar_sale'];
+  const toggleModes: EntryMode[] = ['expense', 'income', 'dollar_sale'];
 
   const toggleLabel = (mode: EntryMode) => {
     if (mode === 'expense') return 'Gasto';
@@ -279,18 +279,21 @@ export function AddModal({
           {toggleModes.map(mode => (
             <button
               key={mode}
+              disabled={isEdit && mode === 'dollar_sale'}
               onClick={() => syncEntryModeToType(mode)}
               style={{
                 flex: 1,
                 padding: '9px 4px',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: isEdit && mode === 'dollar_sale' ? 'not-allowed' : 'pointer',
                 fontSize: 13,
                 fontWeight: 500,
                 borderRadius: radius * 0.5,
                 background: entryMode === mode ? accent : 'transparent',
                 color: entryMode === mode ? '#fff' : t.textSecondary,
+                opacity: isEdit && mode === 'dollar_sale' ? 0.45 : 1,
               }}
+              title={isEdit && mode === 'dollar_sale' ? 'La operación Dólares solo se crea como movimiento nuevo' : undefined}
             >
               {toggleLabel(mode)}
             </button>
