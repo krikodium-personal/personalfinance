@@ -22,6 +22,7 @@ interface AddModalProps {
   accent: string;
   radius: number;
   initialTransaction?: Transaction | null;
+  defaultDate?: string | null;
 }
 
 function modeFromTx(tx: Transaction): 'expense' | 'income' {
@@ -51,6 +52,7 @@ export function AddModal({
   accent,
   radius,
   initialTransaction = null,
+  defaultDate = null,
 }: AddModalProps) {
   const isEdit = Boolean(initialTransaction);
   const descParts = initialTransaction?.desc?.split(' · ') || [];
@@ -71,7 +73,7 @@ export function AddModal({
   const [description, setDescription] = useState(initialDescription);
   const [category, setCategory] = useState(initialTransaction?.category || '');
   const [date, setDate] = useState(
-    initialTransaction ? txDateToInputValue(initialTransaction.date) : todayForInput(),
+    initialTransaction ? txDateToInputValue(initialTransaction.date) : (defaultDate || todayForInput()),
   );
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');

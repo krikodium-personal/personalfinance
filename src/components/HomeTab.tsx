@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CATEGORIES, MONTHS } from '../constants';
 import type { Category, ThemePalette, Transaction } from '../types';
 import { fmt, parseTxDate } from '../utils';
@@ -13,6 +13,7 @@ interface HomeTabProps {
   radius: number;
   onDelete: (id: string | string[]) => void;
   onEdit: (tx: Transaction) => void;
+  onAddDateContextChange?: (date: string | null) => void;
 }
 
 const fallbackCategory: Category = { id: 'other', label: 'Otras', icon: '📦', color: '#a0a0a0', subcategories: [] };
@@ -35,14 +36,27 @@ const extractSaleVendor = (tx: Transaction): string | null => {
   return null;
 };
 
-export function HomeTab({ transactions, categories, loading, t, accent, radius, onDelete, onEdit }: HomeTabProps) {
+export function HomeTab({ transactions, categories, loading, t, accent, radius, onDelete, onEdit, onAddDateContextChange }: HomeTabProps) {
   const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [balanceView, setBalanceView] = useState<'monthly' | 'annual'>('monthly');
   const [selectedDollarSale, setSelectedDollarSale] = useState<DisplayItem | null>(null);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(null);
   const [pendingDeleteLabel, setPendingDeleteLabel] = useState('');
-  const filterYear = now.getFullYear();
+  const filterYear = currentYear;
+
+  useEffect(() => {
+    if (!onAddDateContextChange) return;
+    const isCurrentMonth = filterMonth === currentMonth && filterYear === currentYear;
+    if (isCurrentMonth) {
+      onAddDateContextChange(null);
+      return;
+    }
+    const month = String(filterMonth + 1).padStart(2, '0');
+    onAddDateContextChange(`${filterYear}-${month}-01`);
+  }, [currentMonth, currentYear, filterMonth, filterYear, onAddDateContextChange]);
 
   const filtered = transactions.filter(tx => {
     const d = parseTxDate(tx.date);

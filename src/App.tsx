@@ -68,6 +68,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' } | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [addDefaultDate, setAddDefaultDate] = useState<string | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showTweaks, setShowTweaks] = useState(false);
   const CATEGORY_MIGRATION_KEY = 'finanzas_categories_migration_v2_applied';
@@ -188,6 +189,12 @@ export default function App() {
   useEffect(() => {
     serverCategoriesUpdatedAtRef.current = null;
   }, [user?.id]);
+
+  useEffect(() => {
+    if (tab !== 'home') {
+      setAddDefaultDate(null);
+    }
+  }, [tab]);
 
   const addTransaction = async (tx: Omit<Transaction, 'id'>): Promise<{ ok: boolean; error?: string }> => {
     if (!user) return { ok: false, error: 'Sesión inválida. Volvé a iniciar sesión.' };
@@ -377,6 +384,7 @@ export default function App() {
               radius={radius}
               onDelete={deleteTransaction}
               onEdit={tx => setEditingTransaction(tx)}
+              onAddDateContextChange={setAddDefaultDate}
             />
           )}
           {tab === 'summary' && <SummaryTab transactions={transactions} categories={categories} t={t} accent={accent} radius={radius} />}
@@ -424,6 +432,7 @@ export default function App() {
           t={t}
           accent={accent}
           radius={radius}
+          defaultDate={addDefaultDate}
         />
       )}
       {editingTransaction && (
