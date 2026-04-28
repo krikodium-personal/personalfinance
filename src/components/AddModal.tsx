@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Category, Currency, ThemePalette, Transaction, TxType } from '../types';
 import { arsFromUsdSaleBlueMid, blueMid, fetchDolarHoyRates, type DollarRates } from '../lib/dolarRates';
-import { fmt } from '../utils';
+import { fmt, txDateToInputValue } from '../utils';
 import { Icon, Spinner } from './ui';
 
 type EntryMode = 'expense' | 'income' | 'dollar_sale';
@@ -26,6 +26,20 @@ interface AddModalProps {
 
 function modeFromTx(tx: Transaction): 'expense' | 'income' {
   return tx.type === 'income' ? 'income' : 'expense';
+}
+
+function todayForInput(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Guarda la fecha seleccionada sin corrimiento por timezone usando mediodia local. */
+function toStoredIsoDate(dateInput: string): string {
+  const localNoon = new Date(`${dateInput}T12:00:00`);
+  return localNoon.toISOString();
 }
 
 export function AddModal({
@@ -57,7 +71,7 @@ export function AddModal({
   const [description, setDescription] = useState(initialDescription);
   const [category, setCategory] = useState(initialTransaction?.category || '');
   const [date, setDate] = useState(
-    initialTransaction ? new Date(initialTransaction.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    initialTransaction ? txDateToInputValue(initialTransaction.date) : todayForInput(),
   );
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -180,7 +194,7 @@ export function AddModal({
       arsAmount,
       descExpenseUsd,
       descIncomeArs,
-      date: new Date(date).toISOString(),
+      date: toStoredIsoDate(date),
     });
     setSaving(false);
     if (!result.ok) {
@@ -219,7 +233,7 @@ export function AddModal({
       amount: num,
       currency,
       desc: composedDescription,
-      date: new Date(date).toISOString(),
+      date: toStoredIsoDate(date),
     });
     setSaving(false);
     if (!result.ok) {

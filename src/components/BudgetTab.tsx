@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { Category, ThemePalette, Transaction } from '../types';
-import { fmt } from '../utils';
+import { fmt, parseTxDate } from '../utils';
 import { Icon } from './ui';
 
 interface BudgetTabProps {
@@ -52,7 +52,7 @@ export function BudgetTab({
   const [dragOverCategoryId, setDragOverCategoryId] = useState<string | null>(null);
 
   const currentExpenses = transactions.filter(tx => {
-    const d = new Date(tx.date);
+    const d = parseTxDate(tx.date);
     return tx.type === 'expense' && tx.currency !== 'USD' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
 

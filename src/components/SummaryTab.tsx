@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CATEGORIES, MONTHS } from '../constants';
 import type { Category, Currency, ThemePalette, Transaction } from '../types';
-import { fmt } from '../utils';
+import { fmt, parseTxDate } from '../utils';
 import { BarChart, DonutChart } from './ui';
 
 interface SummaryTabProps {
@@ -25,7 +25,7 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
   const monthlyData = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
     const txs = transactions.filter(tx => {
-      const td = new Date(tx.date);
+      const td = parseTxDate(tx.date);
       return td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear() && tx.currency !== 'USD';
     });
     return {
@@ -44,17 +44,17 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
     const year = selectedMonthData.year;
 
     const curMonthExpense = transactions.filter(tx => {
-      const d = new Date(tx.date);
+      const d = parseTxDate(tx.date);
       return tx.type === 'expense' && tx.currency !== 'USD' && d.getMonth() === month && d.getFullYear() === year;
     });
 
     const curMonthIncomeArs = transactions.filter(tx => {
-      const d = new Date(tx.date);
+      const d = parseTxDate(tx.date);
       return tx.type === 'income' && tx.currency !== 'USD' && d.getMonth() === month && d.getFullYear() === year;
     });
 
     const curMonthIncomeUsd = transactions.filter(tx => {
-      const d = new Date(tx.date);
+      const d = parseTxDate(tx.date);
       return tx.type === 'income' && tx.currency === 'USD' && d.getMonth() === month && d.getFullYear() === year;
     });
 

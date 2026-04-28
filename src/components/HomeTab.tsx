@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CATEGORIES, MONTHS } from '../constants';
 import type { Category, ThemePalette, Transaction } from '../types';
-import { fmt } from '../utils';
+import { fmt, parseTxDate } from '../utils';
 import { Icon, Spinner } from './ui';
 
 interface HomeTabProps {
@@ -45,7 +45,7 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
   const filterYear = now.getFullYear();
 
   const filtered = transactions.filter(tx => {
-    const d = new Date(tx.date);
+    const d = parseTxDate(tx.date);
     return d.getMonth() === filterMonth && d.getFullYear() === filterYear;
   });
 
@@ -53,7 +53,7 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
   const arsExpenseMonth = filtered.filter(tx => tx.type === 'expense' && tx.currency !== 'USD').reduce((s, tx) => s + tx.amount, 0);
   const usdIncomeMonth = filtered.filter(tx => tx.type === 'income' && tx.currency === 'USD').reduce((s, tx) => s + tx.amount, 0);
   const usdExpenseMonth = filtered.filter(tx => tx.type === 'expense' && tx.currency === 'USD').reduce((s, tx) => s + tx.amount, 0);
-  const yearly = transactions.filter(tx => new Date(tx.date).getFullYear() === filterYear);
+  const yearly = transactions.filter(tx => parseTxDate(tx.date).getFullYear() === filterYear);
   const arsIncomeYear = yearly.filter(tx => tx.type === 'income' && tx.currency !== 'USD').reduce((s, tx) => s + tx.amount, 0);
   const arsExpenseYear = yearly.filter(tx => tx.type === 'expense' && tx.currency !== 'USD').reduce((s, tx) => s + tx.amount, 0);
   const usdIncomeYear = yearly.filter(tx => tx.type === 'income' && tx.currency === 'USD').reduce((s, tx) => s + tx.amount, 0);
