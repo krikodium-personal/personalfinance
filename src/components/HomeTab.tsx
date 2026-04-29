@@ -210,16 +210,32 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
               </button>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 18, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 18, flexWrap: 'wrap', rowGap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
               <span style={{ fontSize: 13, fontWeight: 600, opacity: 0.85 }}>ARS</span>
-              <span style={{ fontSize: 'clamp(21px, 6.2vw, 36px)', fontWeight: 700, letterSpacing: -1, whiteSpace: 'nowrap', lineHeight: 1.05 }}>
+              <span
+                style={{
+                  fontSize: 'clamp(18px, 4.6vw, 28px)',
+                  fontWeight: 700,
+                  letterSpacing: -1,
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.05,
+                }}
+              >
                 {fmt(arsNet, 'ARS')}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
               <span style={{ fontSize: 13, fontWeight: 600, opacity: 0.85 }}>USD</span>
-              <span style={{ fontSize: 'clamp(21px, 6.2vw, 36px)', fontWeight: 700, letterSpacing: -1, whiteSpace: 'nowrap', lineHeight: 1.05 }}>
+              <span
+                style={{
+                  fontSize: 'clamp(18px, 4.6vw, 28px)',
+                  fontWeight: 700,
+                  letterSpacing: -1,
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.05,
+                }}
+              >
                 {fmt(usdNet, 'USD')}
               </span>
             </div>
@@ -275,7 +291,12 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {displayItems.map(item => {
           if (item.kind === 'dollar_sale') {
-            const timestampLabel = `${item.timestamp.getDate()} ${MONTHS[item.timestamp.getMonth()]} ${item.timestamp.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
+            const opDate = parseTxDate(item.incomeArs.date);
+            const timestampLabel = opDate.toLocaleDateString('es-AR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: '2-digit',
+            });
             return (
               <div
                 key={`${item.expenseUsd.id}-${item.incomeArs.id}`}
@@ -330,8 +351,12 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
             categories.find(category => category.id === tx.category) ||
             CATEGORIES.find(category => category.id === tx.category) ||
             fallbackCategory;
-          const created = new Date(tx.createdAt || tx.date);
-          const timestampLabel = `${created.getDate()} ${MONTHS[created.getMonth()]} ${created.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
+          const txDate = parseTxDate(tx.date);
+          const timestampLabel = txDate.toLocaleDateString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: '2-digit',
+          });
 
           return (
             <div

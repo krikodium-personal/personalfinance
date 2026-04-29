@@ -410,7 +410,7 @@ export default function App() {
           <div style={{ width: '100%', maxWidth: 560, background: t.navBg, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '8px 8px calc(env(safe-area-inset-bottom, 0px) + 8px)', boxShadow: '0 -4px 20px rgba(0,0,0,0.06)', pointerEvents: 'auto' }}>
             <button onClick={() => setTab('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'home' ? accent : t.textSecondary }}><Icon name="home" size={22} /></button>
             <button onClick={() => setTab('summary')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'summary' ? accent : t.textSecondary }}><Icon name="chart" size={22} /></button>
-            <button onClick={() => setTab('budget')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'budget' ? accent : t.textSecondary }}><Icon name="wallet" size={22} /></button>
+            <button onClick={() => setTab('budget')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'budget' ? accent : t.textSecondary }}><Icon name="categories" size={22} /></button>
             <button onClick={() => setTab('converter')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'converter' ? accent : t.textSecondary }}><Icon name="exchange" size={22} /></button>
           </div>
         </div>
