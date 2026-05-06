@@ -436,11 +436,37 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
               <span style={{ color: accent, fontWeight: 700 }}>{fmt(selectedDollarSale.incomeArs.amount, 'ARS')}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+              <span style={{ color: t.textSecondary }}>Tipo de cambio</span>
+              <span style={{ color: t.text, fontWeight: 600 }}>
+                {selectedDollarSale.expenseUsd.amount > 0
+                  ? `${fmt(selectedDollarSale.incomeArs.amount / selectedDollarSale.expenseUsd.amount, 'ARS')} por USD`
+                  : '—'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
               <span style={{ color: t.textSecondary }}>Fecha</span>
               <span style={{ color: t.text, fontWeight: 600 }}>
                 {new Date(selectedDollarSale.incomeArs.date).toLocaleDateString('es-AR')}
               </span>
             </div>
+            <button
+              onClick={() => {
+                const dateLabel = new Date(selectedDollarSale.incomeArs.date).toLocaleDateString('es-AR');
+                const msg = [
+                  'Detalle venta de dolares',
+                  `Comprador: ${selectedDollarSale.vendor}`,
+                  `USD vendidos: ${fmt(selectedDollarSale.expenseUsd.amount, 'USD')}`,
+                  `ARS recibidos: ${fmt(selectedDollarSale.incomeArs.amount, 'ARS')}`,
+                  `Tipo de cambio: ${selectedDollarSale.expenseUsd.amount > 0 ? `${fmt(selectedDollarSale.incomeArs.amount / selectedDollarSale.expenseUsd.amount, 'ARS')} por USD` : '—'}`,
+                  `Fecha: ${dateLabel}`,
+                ].join('\n');
+                const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                window.open(url, '_blank', 'noopener,noreferrer');
+              }}
+              style={{ marginTop: 4, border: 'none', background: '#16a34a', color: '#fff', borderRadius: 10, padding: '10px 12px', cursor: 'pointer', fontWeight: 600 }}
+            >
+              Compartir por WhatsApp
+            </button>
             <button
               onClick={() => {
                 setSelectedDollarSale(null);
