@@ -169,7 +169,13 @@ export function BudgetTab({
   return (
     <div style={{ padding: '16px 16px 0' }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 4 }}>PRESUPUESTO MENSUAL (ARS)</div>
-      <div style={{ fontSize: 12, color: t.textSecondary, marginBottom: 12 }}>Podés crear, renombrar, borrar y reordenar categorías con drag & drop</div>
+      <div style={{ fontSize: 12, color: t.textSecondary, marginBottom: 4 }}>Podés crear, renombrar, borrar y reordenar categorías con drag & drop</div>
+      <div style={{ fontSize: 12, color: t.textSecondary, marginBottom: 12 }}>
+        ¿Querés agregar un ícono especial a la categoría? buscalos acá{' '}
+        <a href="https://emojikeyboard.top/es/" target="_blank" rel="noopener noreferrer" style={{ color: accent }}>
+          https://emojikeyboard.top/es/
+        </a>
+      </div>
 
       <div style={{ background: t.card, borderRadius: radius * 0.75, padding: '12px 14px', marginBottom: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 8 }}>Nueva categoría</div>

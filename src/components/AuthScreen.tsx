@@ -3,7 +3,7 @@ import { Icon, Spinner } from './ui';
 
 interface AuthScreenProps {
   onSignIn: (email: string, password: string) => Promise<{ user: { id: string } | null; error: string | null }>;
-  onSignUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  onSignUp: (email: string, password: string) => Promise<{ error: string | null; alreadyExists?: boolean }>;
   onResetPassword: (email: string) => Promise<{ error: string | null }>;
 }
 
@@ -14,6 +14,7 @@ export function AuthScreen({ onSignIn, onSignUp, onResetPassword }: AuthScreenPr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [warning, setWarning] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const accent = '#1a7a5e';
 
@@ -33,14 +34,16 @@ export function AuthScreen({ onSignIn, onSignUp, onResetPassword }: AuthScreenPr
   const submit = async () => {
     setError('');
     setSuccess('');
+    setWarning('');
     setLoading(true);
 
     if (mode === 'login') {
       const { error: signInError } = await onSignIn(email, password);
       if (signInError) setError(signInError);
     } else if (mode === 'signup') {
-      const { error: signUpError } = await onSignUp(email, password);
+      const { error: signUpError, alreadyExists } = await onSignUp(email, password);
       if (signUpError) setError(signUpError);
+      else if (alreadyExists) setWarning('Ya existe una cuenta con el email ingresado, por favor ingresa a tu cuenta');
       else setSuccess('¡Cuenta creada! Revisá tu email para confirmar.');
     } else {
       const { error: resetError } = await onResetPassword(email);
@@ -61,7 +64,7 @@ export function AuthScreen({ onSignIn, onSignUp, onResetPassword }: AuthScreenPr
 
       <div style={{ display: 'flex', background: '#f0e4d4', borderRadius: 12, padding: 3, width: '100%', marginBottom: 24 }}>
         {(['login', 'signup'] as const).map(item => (
-          <button key={item} onClick={() => { setMode(item); setError(''); setSuccess(''); }} style={{ flex: 1, padding: '9px 0', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500, borderRadius: 10, background: mode === item ? accent : 'transparent', color: mode === item ? '#fff' : '#8a7060' }}>
+          <button key={item} onClick={() => { setMode(item); setError(''); setSuccess(''); setWarning(''); }} style={{ flex: 1, padding: '9px 0', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500, borderRadius: 10, background: mode === item ? accent : 'transparent', color: mode === item ? '#fff' : '#8a7060' }}>
             {item === 'login' ? 'Ingresar' : 'Registrarse'}
           </button>
         ))}
@@ -104,7 +107,7 @@ export function AuthScreen({ onSignIn, onSignUp, onResetPassword }: AuthScreenPr
       {mode === 'login' && (
         <button
           type="button"
-          onClick={() => { setMode('forgot'); setError(''); setSuccess(''); }}
+          onClick={() => { setMode('forgot'); setError(''); setSuccess(''); setWarning(''); }}
           style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: accent, fontSize: 13, cursor: 'pointer', marginBottom: 12, padding: 0 }}
         >
           ¿Olvidaste tu contraseña?
@@ -112,6 +115,7 @@ export function AuthScreen({ onSignIn, onSignUp, onResetPassword }: AuthScreenPr
       )}
 
       {error && <div style={{ width: '100%', padding: '10px 14px', background: '#fde8e8', borderRadius: 10, fontSize: 13, color: '#c0392b', marginBottom: 12 }}>{error}</div>}
+      {warning && <div style={{ width: '100%', padding: '10px 14px', background: '#fff3cd', borderRadius: 10, fontSize: 13, color: '#856404', marginBottom: 12 }}>{warning}</div>}
       {success && <div style={{ width: '100%', padding: '10px 14px', background: '#e8f5f0', borderRadius: 10, fontSize: 13, color: accent, marginBottom: 12 }}>{success}</div>}
 
       <button onClick={submit} disabled={loading} style={{ width: '100%', padding: '14px', background: accent, color: '#fff', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: 'pointer', opacity: loading ? 0.7 : 1, marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
@@ -130,7 +134,7 @@ export function AuthScreen({ onSignIn, onSignUp, onResetPassword }: AuthScreenPr
       {mode === 'forgot' && (
         <button
           type="button"
-          onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
+          onClick={() => { setMode('login'); setError(''); setSuccess(''); setWarning(''); }}
           style={{ marginTop: 16, background: 'none', border: 'none', color: '#8a7060', fontSize: 13, cursor: 'pointer' }}
         >
           Volver a ingresar

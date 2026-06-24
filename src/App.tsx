@@ -328,8 +328,10 @@ export default function App() {
             return { user: data.user, error: error?.message || null };
           }}
           onSignUp={async (email, password) => {
-            const { error } = await signUp(email, password);
-            return { error: error?.message || null };
+            const { data, error } = await signUp(email, password);
+            if (error) return { error: error.message, alreadyExists: false };
+            const alreadyExists = data.user != null && (data.user.identities?.length ?? 0) === 0;
+            return { error: null, alreadyExists };
           }}
           onResetPassword={async email => {
             const { error } = await resetPasswordForEmail(email);
