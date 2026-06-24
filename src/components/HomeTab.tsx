@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { CATEGORIES, MONTHS } from '../constants';
 import type { Category, ThemePalette, Transaction } from '../types';
 import { fmt, parseTxDate } from '../utils';
-import { APP_VERSION } from '../version';
+import { APP_COMMIT } from '../version';
 import { Icon, Spinner } from './ui';
 
 interface HomeTabProps {
@@ -410,7 +410,7 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
       </div>
 
       <div style={{ textAlign: 'center', color: t.textSecondary, fontSize: 11, padding: '24px 0 8px' }}>
-        v{APP_VERSION}
+        {APP_COMMIT}
       </div>
 
       {selectedDollarSale && selectedDollarSale.kind === 'dollar_sale' && (
