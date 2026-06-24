@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { Category, ThemePalette, Transaction } from '../types';
 import { fmt, parseTxDate } from '../utils';
@@ -50,6 +50,9 @@ export function BudgetTab({
   const [deleteModalCategoryId, setDeleteModalCategoryId] = useState<string | null>(null);
   const [draggingCategoryId, setDraggingCategoryId] = useState<string | null>(null);
   const [dragOverCategoryId, setDragOverCategoryId] = useState<string | null>(null);
+  const [isTouchDragging, setIsTouchDragging] = useState(false);
+  const touchDragFromRef = useRef<string | null>(null);
+  const touchDragOverRef = useRef<string | null>(null);
 
   const currentExpenses = transactions.filter(tx => {
     const d = parseTxDate(tx.date);
@@ -163,13 +166,59 @@ export function BudgetTab({
     });
   };
 
+  const startTouchDrag = (categoryId: string) => {
+    touchDragFromRef.current = categoryId;
+    touchDragOverRef.current = categoryId;
+    setDraggingCategoryId(categoryId);
+    setDragOverCategoryId(categoryId);
+    setIsTouchDragging(true);
+  };
+
+  useEffect(() => {
+    if (!isTouchDragging) return;
+
+    const onTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+      event.preventDefault();
+      const element = document.elementFromPoint(touch.clientX, touch.clientY);
+      const overId = element?.closest('[data-category-id]')?.getAttribute('data-category-id');
+      if (overId && overId !== touchDragOverRef.current) {
+        touchDragOverRef.current = overId;
+        setDragOverCategoryId(overId);
+      }
+    };
+
+    const onTouchEnd = () => {
+      const fromId = touchDragFromRef.current;
+      const toId = touchDragOverRef.current;
+      if (fromId && toId) {
+        handleReorderCategories(fromId, toId);
+      }
+      touchDragFromRef.current = null;
+      touchDragOverRef.current = null;
+      setDraggingCategoryId(null);
+      setDragOverCategoryId(null);
+      setIsTouchDragging(false);
+    };
+
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchcancel', onTouchEnd);
+    return () => {
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [isTouchDragging]);
+
   const renameTarget = categories.find(category => category.id === renameModalCategoryId) || null;
   const deleteTarget = categories.find(category => category.id === deleteModalCategoryId) || null;
 
   return (
     <div style={{ padding: '16px 16px 0' }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 4 }}>PRESUPUESTO MENSUAL (ARS)</div>
-      <div style={{ fontSize: 12, color: t.textSecondary, marginBottom: 4 }}>Podés crear, renombrar, borrar y reordenar categorías con drag & drop</div>
+      <div style={{ fontSize: 12, color: t.textSecondary, marginBottom: 4 }}>Podés crear, renombrar, borrar y reordenar categorías. En celular, arrastrá desde el ícono ⋮⋮</div>
       <div style={{ fontSize: 12, color: t.textSecondary, marginBottom: 12 }}>
         ¿Querés agregar un ícono especial a la categoría? buscalos acá{' '}
         <a href="https://emojikeyboard.top/es/" target="_blank" rel="noopener noreferrer" style={{ color: accent }}>
@@ -208,11 +257,7 @@ export function BudgetTab({
           return (
             <div
               key={category.id}
-              draggable
-              onDragStart={() => {
-                setDraggingCategoryId(category.id);
-                setDragOverCategoryId(category.id);
-              }}
+              data-category-id={category.id}
               onDragOver={event => {
                 event.preventDefault();
                 if (dragOverCategoryId !== category.id) {
@@ -232,10 +277,6 @@ export function BudgetTab({
                 setDraggingCategoryId(null);
                 setDragOverCategoryId(null);
               }}
-              onDragEnd={() => {
-                setDraggingCategoryId(null);
-                setDragOverCategoryId(null);
-              }}
               style={{
                 background: t.card,
                 borderRadius: radius * 0.75,
@@ -245,10 +286,39 @@ export function BudgetTab({
                     ? `2px dashed ${accent}`
                     : `2px solid transparent`,
                 opacity: draggingCategoryId === category.id ? 0.75 : 1,
-                cursor: 'grab',
+                userSelect: draggingCategoryId ? 'none' : 'auto',
+                WebkitUserSelect: draggingCategoryId ? 'none' : 'auto',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: budget > 0 ? 10 : 0 }}>
+                <div
+                  draggable
+                  onDragStart={event => {
+                    event.dataTransfer.effectAllowed = 'move';
+                    setDraggingCategoryId(category.id);
+                    setDragOverCategoryId(category.id);
+                  }}
+                  onDragEnd={() => {
+                    setDraggingCategoryId(null);
+                    setDragOverCategoryId(null);
+                  }}
+                  onTouchStart={() => startTouchDrag(category.id)}
+                  aria-label={`Reordenar categoría ${category.label}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '4px 2px',
+                    marginLeft: -4,
+                    cursor: 'grab',
+                    touchAction: 'none',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon name="grip" size={18} color={t.textSecondary} />
+                </div>
                 <span style={{ fontSize: 20 }}>{category.icon}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, fontWeight: 500, color: t.text }}>{category.label}</div>
