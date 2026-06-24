@@ -12,6 +12,7 @@ import { CATEGORIES, DOLLAR_SALE_CATEGORY_ID, TWEAK_DEFAULTS, themes } from './c
 import { useAuth } from './hooks/useAuth';
 import { useEditMode } from './hooks/useEditMode';
 import { useLocalStorageState } from './hooks/useLocalStorageState';
+import { usePullToRefresh } from './hooks/usePullToRefresh';
 import { supabase } from './lib/supabase';
 import type { Category, TabId, Transaction, Tweaks } from './types';
 
@@ -97,8 +98,9 @@ export default function App() {
     window.setTimeout(() => setToast(null), 3000);
   };
 
-  const loadTransactions = useCallback(async () => {
-    setLoading(true);
+  const loadTransactions = useCallback(async (options?: { showLoading?: boolean }) => {
+    const showLoading = options?.showLoading !== false;
+    if (showLoading) setLoading(true);
     const { data, error } = await supabase
       .from('transactions')
       .select('*')
@@ -109,7 +111,7 @@ export default function App() {
     } else {
       setTransactions((data || []).map(rowToTx));
     }
-    setLoading(false);
+    if (showLoading) setLoading(false);
   }, []);
 
   const loadBudgets = useCallback(async () => {
@@ -177,6 +179,22 @@ export default function App() {
       }
     }
   }, [user, setCategories]);
+
+  const refreshData = useCallback(async () => {
+    if (!user) return;
+    await Promise.all([
+      loadTransactions({ showLoading: false }),
+      loadBudgets(),
+      loadCategories(),
+    ]);
+    showToast('Datos actualizados ✓');
+  }, [user, loadTransactions, loadBudgets, loadCategories]);
+
+  const pullRefreshDisabled = showAdd || !!editingTransaction || showTweaks;
+  const { pullDistance, isRefreshing, threshold } = usePullToRefresh({
+    onRefresh: refreshData,
+    disabled: !user || pullRefreshDisabled,
+  });
 
   useEffect(() => {
     if (user) {
@@ -361,9 +379,31 @@ export default function App() {
       <div style={{ width: '100%', maxWidth: 560, background: t.bg, display: 'flex', flexDirection: 'column', position: 'relative', minHeight: '100vh' }}>
         {toast && <Toast message={toast.message} type={toast.type} t={t} />}
 
+        {(pullDistance > 0 || isRefreshing) && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '100%',
+              maxWidth: 560,
+              zIndex: 25,
+              pointerEvents: 'none',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'flex-end',
+              height: Math.max(pullDistance, isRefreshing ? threshold * 0.6 : 0),
+              paddingBottom: 8,
+            }}
+          >
+            <Spinner color={accent} />
+          </div>
+        )}
+
         <div style={{ height: 56, background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 20px', flexShrink: 0 }}>
-          <button onClick={loadTransactions} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textSecondary, padding: 0, display: 'flex', alignItems: 'center' }}>
-            <Icon name={loading ? 'refresh' : 'cloud'} size={18} color={loading ? accent : t.textSecondary} />
+          <button onClick={() => void refreshData()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textSecondary, padding: 0, display: 'flex', alignItems: 'center' }}>
+            <Icon name={loading || isRefreshing ? 'refresh' : 'cloud'} size={18} color={loading || isRefreshing ? accent : t.textSecondary} />
           </button>
         </div>
 

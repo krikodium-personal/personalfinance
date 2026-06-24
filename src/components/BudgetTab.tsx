@@ -293,6 +293,7 @@ export function BudgetTab({
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: budget > 0 ? 10 : 0 }}>
                 <div
                   draggable
+                  data-pull-refresh-disabled
                   onDragStart={event => {
                     event.dataTransfer.effectAllowed = 'move';
                     setDraggingCategoryId(category.id);
@@ -438,7 +439,7 @@ export function BudgetTab({
       </div>
 
       {renameTarget && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
+        <div data-pull-refresh-disabled style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
           <div style={{ width: '100%', maxWidth: 360, margin: '0 16px', background: t.card, borderRadius: radius * 0.75, padding: 16 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: t.text, marginBottom: 10 }}>Editar categoría</div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -469,7 +470,7 @@ export function BudgetTab({
       )}
 
       {deleteTarget && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
+        <div data-pull-refresh-disabled style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
           <div style={{ width: '100%', maxWidth: 360, margin: '0 16px', background: t.card, borderRadius: radius * 0.75, padding: 16 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: t.text, marginBottom: 8 }}>Borrar categoría</div>
             <div style={{ fontSize: 13, color: t.textSecondary, marginBottom: 12 }}>
