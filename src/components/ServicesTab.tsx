@@ -254,6 +254,11 @@ export function ServicesTab({
               {PROPERTY_TYPE_LABELS[property.type]} · {doneCount}/{property.services.length} completos
             </span>
           </span>
+          {doneCount === property.services.length && property.services.length > 0 && (
+            <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 4 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+          )}
           <span style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(-90deg)', display: 'flex' }}>
             <Icon name="chevronDown" size={18} color={t.textSecondary} />
           </span>

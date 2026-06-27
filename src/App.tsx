@@ -5,6 +5,7 @@ import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { BudgetTab } from './components/BudgetTab';
 import { ConverterTab } from './components/ConverterTab';
 import { HomeTab } from './components/HomeTab';
+import { SavingsTab } from './components/SavingsTab';
 import { ServicesTab } from './components/ServicesTab';
 import { SummaryTab } from './components/SummaryTab';
 import { TweaksPanel } from './components/TweaksPanel';
@@ -16,7 +17,32 @@ import { useLocalStorageState } from './hooks/useLocalStorageState';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
 import { normalizeServicesSnapshot, EMPTY_SERVICES_SNAPSHOT } from './lib/servicesData';
 import { supabase } from './lib/supabase';
-import type { Category, ServicesSnapshot, TabId, Transaction, Tweaks } from './types';
+import type { Category, SavingsSnapshot, ServicesSnapshot, TabId, Transaction, Tweaks } from './types';
+
+const EMPTY_SAVINGS_SNAPSHOT: SavingsSnapshot = { funds: [] };
+
+const normalizeSavingsSnapshot = (raw: unknown): SavingsSnapshot => {
+  if (!raw || typeof raw !== 'object') return EMPTY_SAVINGS_SNAPSHOT;
+  const obj = raw as Record<string, unknown>;
+  if (!Array.isArray(obj.funds)) return EMPTY_SAVINGS_SNAPSHOT;
+  return {
+    funds: obj.funds
+      .filter((f): f is Record<string, unknown> => !!f && typeof f === 'object')
+      .map(f => ({
+        id: typeof f.id === 'string' ? f.id : `fund-${Math.random()}`,
+        name: typeof f.name === 'string' ? f.name : 'Sin nombre',
+        currency: f.currency === 'USD' ? 'USD' : 'ARS',
+        entries: Array.isArray(f.entries)
+          ? f.entries
+              .filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
+              .map(e => ({
+                date: typeof e.date === 'string' ? e.date : '',
+                amount: typeof e.amount === 'number' ? e.amount : 0,
+              }))
+          : [],
+      })),
+  };
+};
 
 const rowToTx = (r: {
   id: string;
@@ -69,6 +95,8 @@ export default function App() {
     CATEGORIES,
   );
   const [servicesData, setServicesData] = useState<ServicesSnapshot>(EMPTY_SERVICES_SNAPSHOT);
+  const [savingsData, setSavingsData] = useState<SavingsSnapshot>(EMPTY_SAVINGS_SNAPSHOT);
+  const serverSavingsUpdatedAtRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' } | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -239,6 +267,39 @@ export default function App() {
     }
   }, [user]);
 
+  const persistUserSavings = useCallback(
+    async (data: SavingsSnapshot) => {
+      if (!user) return;
+      const { data: row, error } = await supabase
+        .from('user_savings')
+        .upsert({ user_id: user.id, data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+        .select('updated_at')
+        .maybeSingle();
+      if (error) { showToast('No se pudieron guardar los ahorros en Supabase.', 'error'); return; }
+      if (row?.updated_at) serverSavingsUpdatedAtRef.current = row.updated_at;
+    },
+    [user],
+  );
+
+  const loadSavings = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('user_savings')
+      .select('data, updated_at')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (error) { showToast('No se pudieron cargar los ahorros desde Supabase.', 'error'); return; }
+    if (data) {
+      const incomingTs = data.updated_at;
+      const knownTs = serverSavingsUpdatedAtRef.current;
+      if (incomingTs && knownTs && incomingTs < knownTs) return;
+      if (data.data) {
+        setSavingsData(normalizeSavingsSnapshot(data.data));
+        if (data.updated_at) serverSavingsUpdatedAtRef.current = data.updated_at;
+      }
+    }
+  }, [user]);
+
   const refreshData = useCallback(async () => {
     if (!user) return;
     await Promise.all([
@@ -246,9 +307,10 @@ export default function App() {
       loadBudgets(),
       loadCategories(),
       loadServices(),
+      loadSavings(),
     ]);
     showToast('Datos actualizados ✓');
-  }, [user, loadTransactions, loadBudgets, loadCategories, loadServices]);
+  }, [user, loadTransactions, loadBudgets, loadCategories, loadServices, loadSavings]);
 
   const pullRefreshDisabled = showAdd || !!editingTransaction || showTweaks;
   const { pullDistance, isRefreshing, threshold } = usePullToRefresh({
@@ -262,12 +324,14 @@ export default function App() {
       loadBudgets();
       loadCategories();
       loadServices();
+      loadSavings();
     }
-  }, [user, loadTransactions, loadBudgets, loadCategories, loadServices]);
+  }, [user, loadTransactions, loadBudgets, loadCategories, loadServices, loadSavings]);
 
   useEffect(() => {
     serverCategoriesUpdatedAtRef.current = null;
     serverServicesUpdatedAtRef.current = null;
+    serverSavingsUpdatedAtRef.current = null;
   }, [user?.id]);
 
   useEffect(() => {
@@ -518,6 +582,16 @@ export default function App() {
               radius={radius}
             />
           )}
+          {tab === 'savings' && (
+            <SavingsTab
+              savingsData={savingsData}
+              setSavingsData={setSavingsData}
+              onPersistSavings={persistUserSavings}
+              t={t}
+              accent={accent}
+              radius={radius}
+            />
+          )}
         </div>
 
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 20 }}>
@@ -526,6 +600,7 @@ export default function App() {
             <button onClick={() => setTab('summary')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'summary' ? accent : t.textSecondary, padding: 6 }}><Icon name="chart" size={20} /></button>
             <button onClick={() => setTab('budget')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'budget' ? accent : t.textSecondary, padding: 6 }}><Icon name="categories" size={20} /></button>
             <button onClick={() => setTab('services')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'services' ? accent : t.textSecondary, padding: 6 }}><Icon name="services" size={20} /></button>
+            <button onClick={() => setTab('savings')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'savings' ? accent : t.textSecondary, padding: 6 }}><Icon name="savings" size={20} /></button>
             <button onClick={() => setTab('converter')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'converter' ? accent : t.textSecondary, padding: 6 }}><Icon name="exchange" size={20} /></button>
           </div>
         </div>

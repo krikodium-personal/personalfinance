@@ -1,6 +1,6 @@
 export type TxType = 'expense' | 'income';
 export type Currency = 'ARS' | 'USD';
-export type TabId = 'home' | 'summary' | 'budget' | 'converter' | 'services';
+export type TabId = 'home' | 'summary' | 'budget' | 'services' | 'savings' | 'converter';
 
 export type PropertyType = 'casa' | 'depto';
 
@@ -48,6 +48,22 @@ export interface Category {
   icon: string;
   color: string;
   subcategories: string[];
+}
+
+export interface SavingsEntry {
+  date: string; // YYYY-MM-DD
+  amount: number;
+}
+
+export interface SavingsFund {
+  id: string;
+  name: string;
+  currency: Currency;
+  entries: SavingsEntry[];
+}
+
+export interface SavingsSnapshot {
+  funds: SavingsFund[];
 }
 
 export interface Tweaks {
