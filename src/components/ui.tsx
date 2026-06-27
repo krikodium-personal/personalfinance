@@ -41,8 +41,8 @@ export function Spinner({ color }: { color: string }) {
   return <div style={{ width: 20, height: 20, border: `2px solid ${color}30`, borderTop: `2px solid ${color}`, borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />;
 }
 
-export function Toast({ message, type, t }: { message: string; type: 'info' | 'error'; t: ThemePalette }) {
-  return <div style={{ position: 'absolute', top: 60, left: 16, right: 16, zIndex: 200, background: type === 'error' ? '#e05555' : t.text, color: '#fff', padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 500, boxShadow: '0 4px 20px rgba(0,0,0,0.2)', animation: 'fadeIn 0.2s ease' }}>{message}</div>;
+export function Toast({ message, type }: { message: string; type: 'info' | 'error'; t?: ThemePalette }) {
+  return <div style={{ position: 'absolute', top: 60, left: 16, right: 16, zIndex: 200, background: type === 'error' ? '#e05555' : '#1a1a1a', color: '#fff', padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 500, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', animation: 'fadeIn 0.2s ease' }}>{message}</div>;
 }
 
 export function DonutChart({

@@ -57,8 +57,9 @@ export function SavingsTab({
   const [updatingFund, setUpdatingFund] = useState<SavingsFund | null>(null);
   const [newAmount, setNewAmount] = useState('');
   const [newDate, setNewDate] = useState(today());
+  const parseAmount = (s: string) => parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
   const previewPct = updatingFund && updatingFund.entries.length > 0
-    ? pct(updatingFund.entries[updatingFund.entries.length - 1].amount, parseFloat(newAmount) || 0)
+    ? pct(updatingFund.entries[updatingFund.entries.length - 1].amount, parseAmount(newAmount))
     : null;
 
   // Modal: editar entrada del historial
@@ -92,8 +93,8 @@ export function SavingsTab({
 
   const handleUpdateAmount = () => {
     if (!updatingFund || !newAmount) return;
-    const amount = parseFloat(newAmount);
-    if (isNaN(amount) || amount < 0) return;
+    const amount = parseAmount(newAmount);
+    if (isNaN(amount) || amount <= 0) return;
     const entry = { date: newDate, amount, kind: 'update' as const };
     const next: SavingsSnapshot = {
       funds: savingsData.funds.map(f =>
@@ -116,7 +117,7 @@ export function SavingsTab({
 
   const handleEditEntry = () => {
     if (!editingEntry) return;
-    const amount = parseFloat(editingEntry.amount);
+    const amount = parseAmount(editingEntry.amount);
     if (isNaN(amount) || amount < 0) return;
     const next: SavingsSnapshot = {
       funds: savingsData.funds.map(f => {
@@ -322,10 +323,15 @@ export function SavingsTab({
             <div>
               <label style={labelStyle}>Nuevo monto ({updatingFund.currency})</label>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
                 value={newAmount}
-                onChange={e => setNewAmount(e.target.value)}
+                onChange={e => {
+                  const cleaned = e.target.value.replace(/[^\d,]/g, '');
+                  const parts = cleaned.split(',');
+                  const intFormatted = parts[0] ? Number(parts[0].replace(/\./g, '')).toLocaleString('es-AR') : '';
+                  setNewAmount(parts.length > 1 ? `${intFormatted},${parts[1].slice(0, 2)}` : intFormatted);
+                }}
                 placeholder="0"
                 style={inputStyle}
                 autoFocus
@@ -336,7 +342,7 @@ export function SavingsTab({
                 <span style={{ fontSize: 13, color: t.textSecondary }}>Rendimiento:</span>
                 <PctBadge value={previewPct} />
                 <span style={{ fontSize: 12, color: t.textSecondary }}>
-                  ({previewPct >= 0 ? '+' : ''}{fmt(Math.abs((parseFloat(newAmount) || 0) - updatingFund.entries[updatingFund.entries.length - 1].amount), updatingFund.currency)})
+                  ({previewPct >= 0 ? '+' : ''}{fmt(Math.abs(parseAmount(newAmount) - updatingFund.entries[updatingFund.entries.length - 1].amount), updatingFund.currency)})
                 </span>
               </div>
             )}
@@ -361,7 +367,12 @@ export function SavingsTab({
             </div>
             <div>
               <label style={labelStyle}>Monto</label>
-              <input type="number" inputMode="decimal" value={editingEntry.amount} onChange={e => setEditingEntry({ ...editingEntry, amount: e.target.value })} style={inputStyle} autoFocus />
+              <input type="text" inputMode="decimal" value={editingEntry.amount} onChange={e => {
+                const cleaned = e.target.value.replace(/[^\d,]/g, '');
+                const parts = cleaned.split(',');
+                const intFormatted = parts[0] ? Number(parts[0].replace(/\./g, '')).toLocaleString('es-AR') : '';
+                setEditingEntry({ ...editingEntry, amount: parts.length > 1 ? `${intFormatted},${parts[1].slice(0, 2)}` : intFormatted });
+              }} style={inputStyle} autoFocus />
             </div>
             <div>
               <label style={labelStyle}>Fecha</label>
