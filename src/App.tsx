@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AddModal } from './components/AddModal';
 import { AuthScreen } from './components/AuthScreen';
+import { LockScreen } from './components/LockScreen';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { BudgetTab } from './components/BudgetTab';
 import { ConverterTab } from './components/ConverterTab';
@@ -12,6 +13,7 @@ import { TweaksPanel } from './components/TweaksPanel';
 import { Icon, Spinner, Toast } from './components/ui';
 import { CATEGORIES, DOLLAR_SALE_CATEGORY_ID, TWEAK_DEFAULTS, themes } from './constants';
 import { useAuth } from './hooks/useAuth';
+import { useBiometricLock } from './hooks/useBiometricLock';
 import { useEditMode } from './hooks/useEditMode';
 import { useLocalStorageState } from './hooks/useLocalStorageState';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
@@ -87,6 +89,7 @@ const normalizeCategories = (items: unknown): Category[] => {
 
 export default function App() {
   const { user, loading: authLoading, passwordRecovery, signIn, signUp, resetPasswordForEmail, updatePassword, signOut } = useAuth();
+  const biometric = useBiometricLock(!!user);
   const [tweaks, setTweaks] = useLocalStorageState<Tweaks>('finanzas_tweaks', { ...TWEAK_DEFAULTS });
   const [tab, setTab] = useLocalStorageState<TabId>('finanzas_tab', 'home');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -524,6 +527,10 @@ export default function App() {
     );
   }
 
+  if (biometric.isLocked) {
+    return <LockScreen t={t} accent={accent} onUnlock={biometric.unlock} />;
+  }
+
   if (passwordRecovery && user) {
     return (
       <div style={{ width: '100%', minHeight: '100vh', display: 'flex', justifyContent: 'center', background: '#fdf6ee' }}>
@@ -577,7 +584,12 @@ export default function App() {
               <div style={{ fontSize: 22, fontWeight: 700, color: t.text }}>Pekri Finanzas</div>
               <div style={{ fontSize: 13, color: t.textSecondary, marginTop: 2 }}>{user.email}</div>
             </div>
-            <button onClick={logout} style={{ background: 'none', border: `1px solid ${t.border}`, borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontSize: 12, color: t.textSecondary }}>Salir</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button onClick={() => setShowTweaks(v => !v)} style={{ background: 'none', border: `1px solid ${t.border}`, borderRadius: 10, padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: t.textSecondary }}>
+                <Icon name="settings" size={16} color={t.textSecondary} />
+              </button>
+              <button onClick={logout} style={{ background: 'none', border: `1px solid ${t.border}`, borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontSize: 12, color: t.textSecondary }}>Salir</button>
+            </div>
           </div>
         </div>
 
@@ -654,7 +666,7 @@ export default function App() {
         </div>
       </div>
 
-      {showTweaks && <TweaksPanel tweaks={tweaks} setTweaks={setTweaks} t={t} />}
+      {showTweaks && <TweaksPanel tweaks={tweaks} setTweaks={setTweaks} t={t} biometric={biometric} />}
       {showAdd && (
         <AddModal
           onClose={() => setShowAdd(false)}
