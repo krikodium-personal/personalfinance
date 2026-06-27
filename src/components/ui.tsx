@@ -25,6 +25,17 @@ export function Icon({ name, size = 20, color = 'currentColor' }: { name: string
   return icons[name] || null;
 }
 
+export function SkeletonCard({ t, radius, lines = 2 }: { t: ThemePalette; radius: number; lines?: number }) {
+  return (
+    <div style={{ background: t.card, borderRadius: radius, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+      <div style={{ height: 14, width: '40%', background: t.cardAlt, borderRadius: 6, marginBottom: 10, animation: 'pulse 1.4s ease-in-out infinite' }} />
+      {Array.from({ length: lines }).map((_, i) => (
+        <div key={i} style={{ height: 11, width: i === lines - 1 ? '55%' : '70%', background: t.cardAlt, borderRadius: 6, marginBottom: i < lines - 1 ? 7 : 0, animation: 'pulse 1.4s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
+      ))}
+    </div>
+  );
+}
+
 export function Spinner({ color }: { color: string }) {
   return <div style={{ width: 20, height: 20, border: `2px solid ${color}30`, borderTop: `2px solid ${color}`, borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />;
 }

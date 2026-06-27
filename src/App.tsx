@@ -577,6 +577,7 @@ export default function App() {
               servicesData={servicesData}
               setServicesData={setServicesData}
               onPersistServices={persistUserServices}
+              loading={loading}
               t={t}
               accent={accent}
               radius={radius}
@@ -587,6 +588,7 @@ export default function App() {
               savingsData={savingsData}
               setSavingsData={setSavingsData}
               onPersistSavings={persistUserSavings}
+              loading={loading}
               t={t}
               accent={accent}
               radius={radius}

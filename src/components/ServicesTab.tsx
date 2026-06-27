@@ -12,12 +12,13 @@ import {
   toggleStatusField,
 } from '../lib/servicesData';
 import type { PropertyType, RentalProperty, ServicesSnapshot, ThemePalette } from '../types';
-import { Icon, ServicesMonthBarChart } from './ui';
+import { Icon, ServicesMonthBarChart, SkeletonCard } from './ui';
 
 interface ServicesTabProps {
   servicesData: ServicesSnapshot;
   setServicesData: Dispatch<SetStateAction<ServicesSnapshot>>;
   onPersistServices: (data: ServicesSnapshot) => Promise<void>;
+  loading?: boolean;
   t: ThemePalette;
   accent: string;
   radius: number;
@@ -27,6 +28,7 @@ export function ServicesTab({
   servicesData,
   setServicesData,
   onPersistServices,
+  loading,
   t,
   accent,
   radius,
@@ -493,7 +495,11 @@ export function ServicesTab({
         </div>
       )}
 
-      {showConfig ? (
+      {loading && !showConfig ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[1, 2, 3].map(i => <SkeletonCard key={i} t={t} radius={radius * 0.75} />)}
+        </div>
+      ) : showConfig ? (
         renderConfig()
       ) : properties.length === 0 ? (
         <div

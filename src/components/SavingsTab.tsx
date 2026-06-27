@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { SavingsFund, SavingsSnapshot, ThemePalette } from '../types';
 import { fmt } from '../utils';
-import { Icon } from './ui';
+import { Icon, SkeletonCard } from './ui';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -32,6 +32,7 @@ export function SavingsTab({
   savingsData,
   setSavingsData,
   onPersistSavings,
+  loading,
   t,
   accent,
   radius,
@@ -39,6 +40,7 @@ export function SavingsTab({
   savingsData: SavingsSnapshot;
   setSavingsData: React.Dispatch<React.SetStateAction<SavingsSnapshot>>;
   onPersistSavings: (data: SavingsSnapshot) => void;
+  loading?: boolean;
   t: ThemePalette;
   accent: string;
   radius: number;
@@ -170,7 +172,13 @@ export function SavingsTab({
         </button>
       </div>
 
-      {savingsData.funds.length === 0 && (
+      {loading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[1, 2, 3].map(i => <SkeletonCard key={i} t={t} radius={radius} />)}
+        </div>
+      )}
+
+      {!loading && savingsData.funds.length === 0 && (
         <div style={{ textAlign: 'center', color: t.textSecondary, fontSize: 14, padding: '40px 0' }}>
           No tenés fondos todavía.<br />Tocá "Nuevo fondo" para empezar.
         </div>
