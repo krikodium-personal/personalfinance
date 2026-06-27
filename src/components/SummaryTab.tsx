@@ -207,11 +207,15 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
     setExpandedCategoryKeys(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const renderDistributionBody = (items: DistItem[], currency: Currency = 'ARS') => (
+  const renderDistributionBody = (items: DistItem[], currency: Currency = 'ARS') => {
+    const total = items.reduce((s, i) => s + i.value, 0);
+    return (
     <>
       <DonutChart data={items} size={300} currency={currency} t={t} />
       <div style={{ width: '100%', maxWidth: 540, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {items.map(categoryItem => (
+        {items.map(categoryItem => {
+          const pct = total > 0 ? (categoryItem.value / total) * 100 : 0;
+          return (
           <div key={categoryItem.catKey} style={{ borderBottom: `1px solid ${t.border}`, paddingBottom: 10 }}>
             <button
               type="button"
@@ -221,6 +225,7 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 10, height: 10, borderRadius: 5, background: categoryItem.color }} />
                 <span style={{ fontSize: 14, color: t.textSecondary, flex: 1, textAlign: 'left' }}>{categoryItem.label}</span>
+                <span style={{ fontSize: 12, color: t.textSecondary, marginRight: 4 }}>{pct.toFixed(1)}%</span>
                 <span style={{ fontSize: 15, fontWeight: 600, color: t.text }}>{fmt(categoryItem.value, currency)}</span>
                 <div
                   style={{
@@ -244,11 +249,13 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
         {items.length === 0 && <span style={{ fontSize: 13, color: t.textSecondary }}>Sin datos</span>}
       </div>
     </>
   );
+  };
 
   return (
     <div style={{ padding: '16px 16px 0' }}>
