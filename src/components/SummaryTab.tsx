@@ -209,7 +209,7 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
 
   const renderDistributionBody = (items: DistItem[], currency: Currency = 'ARS') => (
     <>
-      <DonutChart data={items} size={300} currency={currency} />
+      <DonutChart data={items} size={300} currency={currency} t={t} />
       <div style={{ width: '100%', maxWidth: 540, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {items.map(categoryItem => (
           <div key={categoryItem.catKey} style={{ borderBottom: `1px solid ${t.border}`, paddingBottom: 10 }}>

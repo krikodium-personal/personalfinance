@@ -49,11 +49,12 @@ export function DonutChart({
   data,
   size = 160,
   currency = 'ARS',
+  t,
 }: {
   data: Array<{ value: number; color: string }>;
   size?: number;
-  /** Moneda del total central y del gráfico (solo afecta el formato del número). */
   currency?: Currency;
+  t?: ThemePalette;
 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (!total) return <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: 13 }}>Sin datos</div>;
@@ -81,8 +82,8 @@ export function DonutChart({
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e8e3dd" strokeWidth={stroke} />
       {slices.map((s, i) => <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={stroke} strokeDasharray={`${s.dash} ${circumference - s.dash}`} strokeDashoffset={s.offset} strokeLinecap="round" style={{ transform: 'rotate(-90deg)', transformOrigin: `${cx}px ${cy}px` }} />)}
-      <text x={cx} y={cy - size * 0.04} textAnchor="middle" fontSize={size * 0.07} fill="#6b6560">Total</text>
-      <text x={cx} y={cy + size * 0.08} textAnchor="middle" fontSize={amountFontSize} fontWeight="600" fill="#1a1714">{totalLabel}</text>
+      <text x={cx} y={cy - size * 0.04} textAnchor="middle" fontSize={size * 0.07} fill={t?.textSecondary ?? '#6b6560'}>Total</text>
+      <text x={cx} y={cy + size * 0.08} textAnchor="middle" fontSize={amountFontSize} fontWeight="600" fill={t?.text ?? '#1a1714'}>{totalLabel}</text>
     </svg>
   );
 }

@@ -4,19 +4,19 @@ import type { Category } from './types';
 export const DOLLAR_SALE_CATEGORY_ID = 'cambio-usd';
 
 export const CATEGORIES: Category[] = [
-  { id: 'cambio-usd', label: 'Cambio USD', icon: '💵', color: '#6b7280', subcategories: [] },
-  { id: 'comida', label: 'Comida', icon: '🍽', color: '#e07b54', subcategories: ['Verdulería', 'Carnicería', 'Milanesas', 'Super', 'Almacén'] },
-  { id: 'visa', label: 'Visa', icon: '💳', color: '#4f8ef7', subcategories: [] },
-  { id: 'amex', label: 'Amex', icon: '💳', color: '#6ba9ff', subcategories: [] },
-  { id: 'tenis', label: 'Tenis', icon: '🎾', color: '#4caf8a', subcategories: ['Flavio', 'Encordado', 'Torneos', 'Pelotas'] },
-  { id: 'casa-102', label: 'Casa 102', icon: '🏠', color: '#7c6fcd', subcategories: [] },
-  { id: 'casa-116', label: 'Casa 116', icon: '🏡', color: '#9a83d8', subcategories: [] },
-  { id: 'auto', label: 'Auto', icon: '🚗', color: '#5b8dee', subcategories: [] },
-  { id: 'monotributo', label: 'Monotributo', icon: '🧾', color: '#f2a93b', subcategories: [] },
-  { id: 'piti', label: 'Piti', icon: '🧴', color: '#e06b9a', subcategories: ['Librería', 'Remis', 'Semanalidad', 'Salidas', 'Depilación'] },
-  { id: 'servicios', label: 'Servicios', icon: '⚡', color: '#f5c842', subcategories: [] },
-  { id: 'salidas', label: 'Salidas', icon: '🍻', color: '#5eafc7', subcategories: [] },
-  { id: 'regalos', label: 'Regalos', icon: '🎁', color: '#a0a0a0', subcategories: [] },
+  { id: 'cambio-usd', label: 'Cambio USD', icon: '💵', color: '#64748b', subcategories: [] },
+  { id: 'comida', label: 'Comida', icon: '🍽', color: '#f97316', subcategories: ['Verdulería', 'Carnicería', 'Milanesas', 'Super', 'Almacén'] },
+  { id: 'visa', label: 'Visa', icon: '💳', color: '#2563eb', subcategories: [] },
+  { id: 'amex', label: 'Amex', icon: '💳', color: '#7c3aed', subcategories: [] },
+  { id: 'tenis', label: 'Tenis', icon: '🎾', color: '#16a34a', subcategories: ['Flavio', 'Encordado', 'Torneos', 'Pelotas'] },
+  { id: 'casa-102', label: 'Casa 102', icon: '🏠', color: '#0d9488', subcategories: [] },
+  { id: 'casa-116', label: 'Casa 116', icon: '🏡', color: '#e11d48', subcategories: [] },
+  { id: 'auto', label: 'Auto', icon: '🚗', color: '#0ea5e9', subcategories: [] },
+  { id: 'monotributo', label: 'Monotributo', icon: '🧾', color: '#d97706', subcategories: [] },
+  { id: 'piti', label: 'Piti', icon: '🧴', color: '#db2777', subcategories: ['Librería', 'Remis', 'Semanalidad', 'Salidas', 'Depilación'] },
+  { id: 'servicios', label: 'Servicios', icon: '⚡', color: '#ca8a04', subcategories: [] },
+  { id: 'salidas', label: 'Salidas', icon: '🍻', color: '#9333ea', subcategories: [] },
+  { id: 'regalos', label: 'Regalos', icon: '🎁', color: '#84cc16', subcategories: [] },
 ];
 
 export const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];

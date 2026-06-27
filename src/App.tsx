@@ -78,7 +78,7 @@ const normalizeCategories = (items: unknown): Category[] => {
         id: typeof raw.id === 'string' && raw.id ? raw.id : `${fallback.id}-${idx}`,
         label: typeof raw.label === 'string' && raw.label ? raw.label : fallback.label,
         icon: typeof raw.icon === 'string' && raw.icon ? raw.icon : fallback.icon,
-        color: typeof raw.color === 'string' && raw.color ? raw.color : fallback.color,
+        color: CATEGORIES.find(c => c.id === raw.id)?.color ?? (typeof raw.color === 'string' && raw.color ? raw.color : fallback.color),
         subcategories: Array.isArray(raw.subcategories)
           ? raw.subcategories.filter((sub): sub is string => typeof sub === 'string' && sub.trim().length > 0)
           : [],
@@ -108,6 +108,7 @@ export default function App() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showTweaks, setShowTweaks] = useState(false);
   const CATEGORY_MIGRATION_KEY = 'finanzas_categories_migration_v2_applied';
+  const CATEGORY_COLOR_MIGRATION_KEY = 'finanzas_categories_color_migration_v1_applied';
   /** Latest `updated_at` we trust from Supabase (avoids applying stale GET after a newer upsert). */
   const serverCategoriesUpdatedAtRef = useRef<string | null>(null);
   const serverServicesUpdatedAtRef = useRef<string | null>(null);
@@ -117,6 +118,17 @@ export default function App() {
     if (!migrationDone) {
       setCategories(CATEGORIES);
       window.localStorage.setItem(CATEGORY_MIGRATION_KEY, '1');
+      window.localStorage.setItem(CATEGORY_COLOR_MIGRATION_KEY, '1');
+      return;
+    }
+
+    const colorMigrationDone = window.localStorage.getItem(CATEGORY_COLOR_MIGRATION_KEY) === '1';
+    if (!colorMigrationDone) {
+      setCategories(prev => normalizeCategories(prev).map(cat => {
+        const canonical = CATEGORIES.find(c => c.id === cat.id);
+        return canonical ? { ...cat, color: canonical.color } : cat;
+      }));
+      window.localStorage.setItem(CATEGORY_COLOR_MIGRATION_KEY, '1');
       return;
     }
 
