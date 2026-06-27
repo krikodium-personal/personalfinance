@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Category, Currency, ThemePalette, Transaction, TxType } from '../types';
+import type { Category, Currency, SavingsFund, ThemePalette, Transaction, TxType } from '../types';
 import { blueMid, fetchDolarHoyRates, type DollarRates } from '../lib/dolarRates';
 import { fmt, txDateToInputValue } from '../utils';
 import { Icon, Spinner } from './ui';
 
-type EntryMode = 'expense' | 'income' | 'dollar_sale';
+type EntryMode = 'expense' | 'income' | 'dollar_sale' | 'savings';
 type DollarRateSource = 'dolarhoy_mid' | 'manual';
 
 interface AddModalProps {
@@ -19,6 +19,15 @@ interface AddModalProps {
     descIncomeArs: string;
     date: string;
   }) => Promise<{ ok: boolean; error?: string }>;
+  /** Depósito a fondo de ahorro: registra egreso + actualiza fondo. Solo modal nuevo. */
+  onSubmitSavings?: (payload: {
+    amount: number;
+    currency: Currency;
+    fundId: string;
+    desc: string;
+    date: string;
+  }) => Promise<{ ok: boolean; error?: string }>;
+  savingsFunds?: SavingsFund[];
   categories: Category[];
   t: ThemePalette;
   accent: string;
@@ -49,6 +58,8 @@ export function AddModal({
   onClose,
   onSubmit,
   onSubmitDollarSale,
+  onSubmitSavings,
+  savingsFunds = [],
   categories,
   t,
   accent,
@@ -87,6 +98,7 @@ export function AddModal({
   const [rates, setRates] = useState<DollarRates | null>(null);
   const [ratesLoading, setRatesLoading] = useState(false);
   const [ratesError, setRatesError] = useState('');
+  const [selectedFundId, setSelectedFundId] = useState('');
 
   const loadRates = async () => {
     setRatesLoading(true);
@@ -164,6 +176,36 @@ export function AddModal({
     setEntryMode(mode);
     if (mode === 'expense') setType('expense');
     else if (mode === 'income') setType('income');
+    else if (mode === 'savings') setType('expense');
+  };
+
+  const fundsForCurrency = savingsFunds.filter(f => f.currency === currency);
+
+  // Auto-seleccionar el primero al cambiar moneda si el fondo actual no es de esa moneda
+  useEffect(() => {
+    if (entryMode !== 'savings') return;
+    const valid = fundsForCurrency.some(f => f.id === selectedFundId);
+    if (!valid && fundsForCurrency.length > 0) setSelectedFundId(fundsForCurrency[0].id);
+  }, [currency, entryMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const submitSavings = async () => {
+    setFormError('');
+    if (!onSubmitSavings) { setFormError('Esta acción no está disponible al editar.'); return; }
+    const normalizedAmount = amount.replace(/\./g, '').replace(',', '.');
+    const num = Number(normalizedAmount);
+    if (!num || num <= 0) { setFormError('Ingresá un monto válido mayor a 0.'); return; }
+    if (!selectedFundId) { setFormError('Seleccioná un fondo de ahorro.'); return; }
+    setSaving(true);
+    const result = await onSubmitSavings({
+      amount: num,
+      currency,
+      fundId: selectedFundId,
+      desc: description.trim(),
+      date: toStoredIsoDate(date),
+    });
+    setSaving(false);
+    if (!result.ok) { setFormError(result.error || 'No se pudo guardar el ahorro.'); return; }
+    onClose();
   };
 
   const buildDescPair = (vendorTrimmed: string, trimmedDescription: string) => {
@@ -228,10 +270,8 @@ export function AddModal({
   };
 
   const submit = async () => {
-    if (entryMode === 'dollar_sale') {
-      await submitDollarSale();
-      return;
-    }
+    if (entryMode === 'dollar_sale') { await submitDollarSale(); return; }
+    if (entryMode === 'savings') { await submitSavings(); return; }
 
     setFormError('');
     const normalizedAmount = amount.replace(/\./g, '').replace(',', '.');
@@ -266,12 +306,13 @@ export function AddModal({
     onClose();
   };
 
-  const toggleModes: EntryMode[] = ['expense', 'income', 'dollar_sale'];
+  const toggleModes: EntryMode[] = ['expense', 'income', 'dollar_sale', 'savings'];
 
   const toggleLabel = (mode: EntryMode) => {
     if (mode === 'expense') return 'Gasto';
     if (mode === 'income') return 'Ingreso';
-    return 'Dólares';
+    if (mode === 'dollar_sale') return 'Dólares';
+    return 'Ahorro';
   };
 
   return (
@@ -313,28 +354,30 @@ export function AddModal({
         </div>
 
         <div style={{ display: 'flex', background: t.inputBg, borderRadius: radius * 0.6, padding: 3, marginBottom: 20 }}>
-          {toggleModes.map(mode => (
-            <button
-              key={mode}
-              disabled={isEdit && mode === 'dollar_sale'}
-              onClick={() => syncEntryModeToType(mode)}
-              style={{
-                flex: 1,
-                padding: '9px 4px',
-                border: 'none',
-                cursor: isEdit && mode === 'dollar_sale' ? 'not-allowed' : 'pointer',
-                fontSize: 13,
-                fontWeight: 500,
-                borderRadius: radius * 0.5,
-                background: entryMode === mode ? accent : 'transparent',
-                color: entryMode === mode ? '#fff' : t.textSecondary,
-                opacity: isEdit && mode === 'dollar_sale' ? 0.45 : 1,
-              }}
-              title={isEdit && mode === 'dollar_sale' ? 'La operación Dólares solo se crea como movimiento nuevo' : undefined}
-            >
-              {toggleLabel(mode)}
-            </button>
-          ))}
+          {toggleModes.map(mode => {
+            const disabledInEdit = isEdit && (mode === 'dollar_sale' || mode === 'savings');
+            return (
+              <button
+                key={mode}
+                disabled={disabledInEdit}
+                onClick={() => syncEntryModeToType(mode)}
+                style={{
+                  flex: 1,
+                  padding: '9px 4px',
+                  border: 'none',
+                  cursor: disabledInEdit ? 'not-allowed' : 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  borderRadius: radius * 0.5,
+                  background: entryMode === mode ? accent : 'transparent',
+                  color: entryMode === mode ? '#fff' : t.textSecondary,
+                  opacity: disabledInEdit ? 0.45 : 1,
+                }}
+              >
+                {toggleLabel(mode)}
+              </button>
+            );
+          })}
         </div>
 
         {entryMode === 'dollar_sale' && (
@@ -478,6 +521,59 @@ export function AddModal({
           </>
         )}
 
+        {entryMode === 'savings' && (
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
+              FONDO DE AHORRO <span style={{ color: '#dc2626' }}>*</span>
+            </label>
+            {fundsForCurrency.length === 0 ? (
+              <div style={{ padding: '12px 14px', background: t.inputBg, borderRadius: radius * 0.6, border: `1.5px solid ${t.border}`, fontSize: 13, color: t.textSecondary }}>
+                No tenés fondos en {currency}. Creá uno desde la pestaña Ahorros.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {fundsForCurrency.map(fund => {
+                  const isSelected = selectedFundId === fund.id;
+                  const lastEntry = fund.entries[fund.entries.length - 1];
+                  return (
+                    <button
+                      key={fund.id}
+                      type="button"
+                      onClick={() => setSelectedFundId(fund.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 14px',
+                        border: `1.5px solid ${isSelected ? accent : t.border}`,
+                        borderRadius: radius * 0.6,
+                        background: isSelected ? `${accent}12` : t.inputBg,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{fund.name}</div>
+                        {lastEntry && (
+                          <div style={{ fontSize: 12, color: t.textSecondary, marginTop: 2 }}>
+                            Último saldo: {fmt(lastEntry.amount, fund.currency)}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{
+                        width: 18, height: 18, borderRadius: '50%',
+                        border: `2px solid ${isSelected ? accent : t.border}`,
+                        background: isSelected ? accent : 'transparent',
+                        flexShrink: 0,
+                      }} />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {entryMode !== 'dollar_sale' && (
           <div style={{ marginBottom: 14 }}>
             <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
@@ -516,7 +612,7 @@ export function AddModal({
           </div>
         )}
 
-        {entryMode !== 'dollar_sale' && (
+        {entryMode !== 'dollar_sale' && entryMode !== 'savings' && (
           <>
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 12, color: t.textSecondary, display: 'block', marginBottom: 6, fontWeight: 500 }}>
@@ -610,6 +706,8 @@ export function AddModal({
             'Guardar cambios'
           ) : entryMode === 'dollar_sale' ? (
             'Guardar venta USD / ingreso ARS'
+          ) : entryMode === 'savings' ? (
+            'Guardar ahorro'
           ) : (
             'Guardar'
           )}

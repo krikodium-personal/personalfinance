@@ -94,7 +94,7 @@ export function SavingsTab({
     if (!updatingFund || !newAmount) return;
     const amount = parseFloat(newAmount);
     if (isNaN(amount) || amount < 0) return;
-    const entry = { date: newDate, amount };
+    const entry = { date: newDate, amount, kind: 'update' as const };
     const next: SavingsSnapshot = {
       funds: savingsData.funds.map(f =>
         f.id === updatingFund.id ? { ...f, entries: [...f.entries, entry] } : f,
@@ -188,7 +188,7 @@ export function SavingsTab({
         {savingsData.funds.map(fund => {
           const last = fund.entries[fund.entries.length - 1];
           const prev = fund.entries[fund.entries.length - 2];
-          const periodPct = last && prev ? pct(prev.amount, last.amount) : null;
+          const periodPct = (last && prev && last.kind !== 'deposit') ? pct(prev.amount, last.amount) : null;
 
           const isExpanded = expandedFundId === fund.id;
           const histOpen = showHistory === fund.id;
@@ -247,13 +247,16 @@ export function SavingsTab({
                       </div>
                       {[...fund.entries].reverse().map((entry, i, arr) => {
                         const prevEntry = arr[i + 1];
-                        const entryPct = prevEntry ? pct(prevEntry.amount, entry.amount) : null;
+                        const entryPct = (prevEntry && entry.kind !== 'deposit') ? pct(prevEntry.amount, entry.amount) : null;
                         const originalIndex = fund.entries.length - 1 - i;
                         return (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderBottom: i < arr.length - 1 ? `1px solid ${t.border}` : 'none' }}>
                             <span style={{ fontSize: 12, color: t.textSecondary, minWidth: 80 }}>{entry.date}</span>
                             <span style={{ fontSize: 13, fontWeight: 600, color: t.text, flex: 1 }}>{fmt(entry.amount, fund.currency)}</span>
-                            {entryPct !== null ? <PctBadge value={entryPct} small /> : <span style={{ fontSize: 11, color: t.textSecondary }}>inicial</span>}
+                            {entry.kind === 'deposit'
+                              ? <span style={{ fontSize: 11, color: t.textSecondary }}>depósito</span>
+                              : entryPct !== null ? <PctBadge value={entryPct} small /> : <span style={{ fontSize: 11, color: t.textSecondary }}>inicial</span>
+                            }
                             <button
                               onClick={() => setEditingEntry({ fundId: fund.id, entryIndex: originalIndex, date: entry.date, amount: String(entry.amount) })}
                               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', display: 'flex', alignItems: 'center' }}

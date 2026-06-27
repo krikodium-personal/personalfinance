@@ -375,16 +375,18 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
                   justifyContent: 'center',
                   fontSize: 20,
                   flexShrink: 0,
-                  background: tx.type === 'income' ? `${accent}20` : `${cat.color}18`,
+                  background: tx.category === 'ahorro' ? `${accent}20` : tx.type === 'income' ? `${accent}20` : `${cat.color}18`,
                 }}
               >
-                {tx.type === 'income' ? '💰' : cat.icon}
+                {tx.category === 'ahorro'
+                  ? <Icon name="savings" size={22} color={accent} />
+                  : tx.type === 'income' ? '💰' : cat.icon}
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 500, color: t.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx.desc}</div>
                 <div style={{ marginTop: 2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{tx.type === 'income' ? 'Ingreso' : cat.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{tx.category === 'ahorro' ? 'Ahorro' : tx.type === 'income' ? 'Ingreso' : cat.label}</span>
                   <span style={{ fontSize: 12, color: t.textSecondary }}>· {timestampLabel}</span>
                 </div>
               </div>

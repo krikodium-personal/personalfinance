@@ -53,6 +53,8 @@ export interface Category {
 export interface SavingsEntry {
   date: string; // YYYY-MM-DD
   amount: number;
+  /** 'update' = actualización de rendimiento; 'deposit' = ingreso de dinero al fondo */
+  kind?: 'update' | 'deposit';
 }
 
 export interface SavingsFund {

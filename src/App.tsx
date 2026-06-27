@@ -17,7 +17,7 @@ import { useLocalStorageState } from './hooks/useLocalStorageState';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
 import { normalizeServicesSnapshot, EMPTY_SERVICES_SNAPSHOT } from './lib/servicesData';
 import { supabase } from './lib/supabase';
-import type { Category, SavingsSnapshot, ServicesSnapshot, TabId, Transaction, Tweaks } from './types';
+import type { Category, Currency, SavingsSnapshot, ServicesSnapshot, TabId, Transaction, Tweaks } from './types';
 
 const EMPTY_SAVINGS_SNAPSHOT: SavingsSnapshot = { funds: [] };
 
@@ -38,6 +38,7 @@ const normalizeSavingsSnapshot = (raw: unknown): SavingsSnapshot => {
               .map(e => ({
                 date: typeof e.date === 'string' ? e.date : '',
                 amount: typeof e.amount === 'number' ? e.amount : 0,
+                kind: e.kind === 'deposit' ? 'deposit' as const : 'update' as const,
               }))
           : [],
       })),
@@ -407,6 +408,43 @@ export default function App() {
     return { ok: true };
   };
 
+  const addSavingsTransaction = async (payload: {
+    amount: number;
+    currency: Currency;
+    fundId: string;
+    desc: string;
+    date: string;
+  }): Promise<{ ok: boolean; error?: string }> => {
+    if (!user) return { ok: false, error: 'Sesión inválida. Volvé a iniciar sesión.' };
+    const fund = savingsData.funds.find(f => f.id === payload.fundId);
+    if (!fund) return { ok: false, error: 'Fondo no encontrado.' };
+
+    const { error } = await supabase.from('transactions').insert([{
+      type: 'expense',
+      category: 'ahorro',
+      amount: payload.amount,
+      currency: payload.currency,
+      description: payload.desc ? `${fund.name} · ${payload.desc}` : fund.name,
+      date: payload.date,
+      user_id: user.id,
+    }]);
+    if (error) { showToast(`Error al guardar: ${error.message}`, 'error'); return { ok: false, error: error.message }; }
+
+    const entryDate = payload.date.slice(0, 10);
+    const nextFunds = savingsData.funds.map(f => {
+      if (f.id !== payload.fundId) return f;
+      const lastAmount = f.entries.length > 0 ? f.entries[f.entries.length - 1].amount : 0;
+      return { ...f, entries: [...f.entries, { date: entryDate, amount: lastAmount + payload.amount, kind: 'deposit' as const }] };
+    });
+    const nextSavings = { funds: nextFunds };
+    setSavingsData(nextSavings);
+    queueMicrotask(() => persistUserSavings(nextSavings));
+
+    await loadTransactions();
+    showToast('Ahorro registrado ✓');
+    return { ok: true };
+  };
+
   const updateTransaction = async (id: string, tx: Omit<Transaction, 'id'>): Promise<{ ok: boolean; error?: string }> => {
     if (!user) return { ok: false, error: 'Sesión inválida. Volvé a iniciar sesión.' };
     const { error } = await supabase
@@ -622,6 +660,8 @@ export default function App() {
           onClose={() => setShowAdd(false)}
           onSubmit={addTransaction}
           onSubmitDollarSale={addDollarSale}
+          onSubmitSavings={addSavingsTransaction}
+          savingsFunds={savingsData.funds}
           categories={categories}
           t={t}
           accent={accent}
