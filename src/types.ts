@@ -1,6 +1,35 @@
 export type TxType = 'expense' | 'income';
 export type Currency = 'ARS' | 'USD';
-export type TabId = 'home' | 'summary' | 'budget' | 'converter';
+export type TabId = 'home' | 'summary' | 'budget' | 'converter' | 'services';
+
+export type PropertyType = 'casa' | 'depto';
+
+export interface RentalService {
+  id: string;
+  name: string;
+  serviceType: string;
+}
+
+export interface RentalProperty {
+  id: string;
+  name: string;
+  type: PropertyType;
+  services: RentalService[];
+}
+
+export interface ServicePeriodStatus {
+  propertyId: string;
+  serviceId: string;
+  /** YYYY-MM */
+  period: string;
+  tenantReceivedAt: string | null;
+  servicePaidAt: string | null;
+}
+
+export interface ServicesSnapshot {
+  properties: RentalProperty[];
+  statuses: ServicePeriodStatus[];
+}
 
 export interface Transaction {
   id: string;

@@ -5,6 +5,7 @@ import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { BudgetTab } from './components/BudgetTab';
 import { ConverterTab } from './components/ConverterTab';
 import { HomeTab } from './components/HomeTab';
+import { ServicesTab } from './components/ServicesTab';
 import { SummaryTab } from './components/SummaryTab';
 import { TweaksPanel } from './components/TweaksPanel';
 import { Icon, Spinner, Toast } from './components/ui';
@@ -13,8 +14,9 @@ import { useAuth } from './hooks/useAuth';
 import { useEditMode } from './hooks/useEditMode';
 import { useLocalStorageState } from './hooks/useLocalStorageState';
 import { usePullToRefresh } from './hooks/usePullToRefresh';
+import { normalizeServicesSnapshot, EMPTY_SERVICES_SNAPSHOT } from './lib/servicesData';
 import { supabase } from './lib/supabase';
-import type { Category, TabId, Transaction, Tweaks } from './types';
+import type { Category, ServicesSnapshot, TabId, Transaction, Tweaks } from './types';
 
 const rowToTx = (r: {
   id: string;
@@ -66,6 +68,7 @@ export default function App() {
     'finanzas_budget_categories',
     CATEGORIES,
   );
+  const [servicesData, setServicesData] = useState<ServicesSnapshot>(EMPTY_SERVICES_SNAPSHOT);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' } | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -75,6 +78,7 @@ export default function App() {
   const CATEGORY_MIGRATION_KEY = 'finanzas_categories_migration_v2_applied';
   /** Latest `updated_at` we trust from Supabase (avoids applying stale GET after a newer upsert). */
   const serverCategoriesUpdatedAtRef = useRef<string | null>(null);
+  const serverServicesUpdatedAtRef = useRef<string | null>(null);
 
   useEffect(() => {
     const migrationDone = window.localStorage.getItem(CATEGORY_MIGRATION_KEY) === '1';
@@ -180,15 +184,71 @@ export default function App() {
     }
   }, [user, setCategories]);
 
+  const persistUserServices = useCallback(
+    async (data: ServicesSnapshot) => {
+      if (!user) return;
+      const { data: row, error } = await supabase
+        .from('user_services')
+        .upsert(
+          {
+            user_id: user.id,
+            data,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' },
+        )
+        .select('updated_at')
+        .maybeSingle();
+
+      if (error) {
+        showToast('No se pudieron guardar los servicios en Supabase.', 'error');
+        return;
+      }
+      if (row?.updated_at) {
+        serverServicesUpdatedAtRef.current = row.updated_at;
+      }
+    },
+    [user],
+  );
+
+  const loadServices = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('user_services')
+      .select('data, updated_at')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      showToast('No se pudieron cargar los servicios desde Supabase.', 'error');
+      return;
+    }
+
+    if (data) {
+      const incomingTs = data.updated_at;
+      const knownTs = serverServicesUpdatedAtRef.current;
+      if (incomingTs && knownTs && incomingTs < knownTs) {
+        return;
+      }
+      if (data.data) {
+        setServicesData(normalizeServicesSnapshot(data.data));
+        if (data.updated_at) {
+          serverServicesUpdatedAtRef.current = data.updated_at;
+        }
+      }
+    }
+  }, [user]);
+
   const refreshData = useCallback(async () => {
     if (!user) return;
     await Promise.all([
       loadTransactions({ showLoading: false }),
       loadBudgets(),
       loadCategories(),
+      loadServices(),
     ]);
     showToast('Datos actualizados ✓');
-  }, [user, loadTransactions, loadBudgets, loadCategories]);
+  }, [user, loadTransactions, loadBudgets, loadCategories, loadServices]);
 
   const pullRefreshDisabled = showAdd || !!editingTransaction || showTweaks;
   const { pullDistance, isRefreshing, threshold } = usePullToRefresh({
@@ -201,11 +261,13 @@ export default function App() {
       loadTransactions();
       loadBudgets();
       loadCategories();
+      loadServices();
     }
-  }, [user, loadTransactions, loadBudgets, loadCategories]);
+  }, [user, loadTransactions, loadBudgets, loadCategories, loadServices]);
 
   useEffect(() => {
     serverCategoriesUpdatedAtRef.current = null;
+    serverServicesUpdatedAtRef.current = null;
   }, [user?.id]);
 
   useEffect(() => {
@@ -446,20 +508,31 @@ export default function App() {
             />
           )}
           {tab === 'converter' && <ConverterTab t={t} accent={accent} radius={radius} />}
+          {tab === 'services' && (
+            <ServicesTab
+              servicesData={servicesData}
+              setServicesData={setServicesData}
+              onPersistServices={persistUserServices}
+              t={t}
+              accent={accent}
+              radius={radius}
+            />
+          )}
         </div>
 
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 20 }}>
-          <div style={{ width: '100%', maxWidth: 560, background: t.navBg, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '8px 8px calc(env(safe-area-inset-bottom, 0px) + 8px)', boxShadow: '0 -4px 20px rgba(0,0,0,0.06)', pointerEvents: 'auto' }}>
-            <button onClick={() => setTab('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'home' ? accent : t.textSecondary }}><Icon name="home" size={22} /></button>
-            <button onClick={() => setTab('summary')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'summary' ? accent : t.textSecondary }}><Icon name="chart" size={22} /></button>
-            <button onClick={() => setTab('budget')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'budget' ? accent : t.textSecondary }}><Icon name="categories" size={22} /></button>
-            <button onClick={() => setTab('converter')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'converter' ? accent : t.textSecondary }}><Icon name="exchange" size={22} /></button>
+          <div style={{ width: '100%', maxWidth: 560, background: t.navBg, borderTop: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '8px 4px calc(env(safe-area-inset-bottom, 0px) + 8px)', boxShadow: '0 -4px 20px rgba(0,0,0,0.06)', pointerEvents: 'auto' }}>
+            <button onClick={() => setTab('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'home' ? accent : t.textSecondary, padding: 6 }}><Icon name="home" size={20} /></button>
+            <button onClick={() => setTab('summary')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'summary' ? accent : t.textSecondary, padding: 6 }}><Icon name="chart" size={20} /></button>
+            <button onClick={() => setTab('budget')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'budget' ? accent : t.textSecondary, padding: 6 }}><Icon name="categories" size={20} /></button>
+            <button onClick={() => setTab('services')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'services' ? accent : t.textSecondary, padding: 6 }}><Icon name="services" size={20} /></button>
+            <button onClick={() => setTab('converter')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tab === 'converter' ? accent : t.textSecondary, padding: 6 }}><Icon name="exchange" size={20} /></button>
           </div>
         </div>
 
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 30 }}>
           <div style={{ width: '100%', maxWidth: 560, position: 'relative', pointerEvents: 'none' }}>
-            <button onClick={() => setShowAdd(true)} style={{ position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 82px)', right: 20, width: 56, height: 56, background: accent, borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 6px 20px ${accent}66`, pointerEvents: 'auto' }}>
+            <button onClick={() => setShowAdd(true)} style={{ position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 82px)', right: 20, width: 56, height: 56, background: accent, borderRadius: '50%', border: 'none', cursor: 'pointer', display: tab === 'home' ? 'flex' : 'none', alignItems: 'center', justifyContent: 'center', boxShadow: `0 6px 20px ${accent}66`, pointerEvents: 'auto' }}>
               <Icon name="plus" size={24} color="#fff" />
             </button>
           </div>

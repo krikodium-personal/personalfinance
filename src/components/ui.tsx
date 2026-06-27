@@ -19,6 +19,7 @@ export function Icon({ name, size = 20, color = 'currentColor' }: { name: string
     eye: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
     eyeOff: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
     grip: <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>,
+    services: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22V4a2 2 0 012-2h8a2 2 0 012 2v18Z"/><path d="M6 12H4a2 2 0 00-2 2v6a2 2 0 002 2h2"/><path d="M18 9h2a2 2 0 012 2v9a2 2 0 01-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>,
   };
   return icons[name] || null;
 }
@@ -70,6 +71,86 @@ export function DonutChart({
       <text x={cx} y={cy - size * 0.04} textAnchor="middle" fontSize={size * 0.07} fill="#6b6560">Total</text>
       <text x={cx} y={cy + size * 0.08} textAnchor="middle" fontSize={amountFontSize} fontWeight="600" fill="#1a1714">{totalLabel}</text>
     </svg>
+  );
+}
+
+export function ServicesMonthBarChart({
+  monthlyData,
+  accent,
+  selectedIndex,
+  onSelect,
+}: {
+  monthlyData: Array<{ label: string; status: 'complete' | 'pending' | 'empty'; current: boolean }>;
+  accent: string;
+  selectedIndex?: number;
+  onSelect?: (index: number) => void;
+}) {
+  const statusColor = (status: 'complete' | 'pending' | 'empty') => {
+    if (status === 'complete') return '#16a34a';
+    if (status === 'pending') return '#eab308';
+    return '#e8e3dd';
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80, padding: '0 4px' }}>
+      {monthlyData.map((item, index) => {
+        const isSelected = selectedIndex === index;
+        const fillHeight = item.status === 'empty' ? 0 : 100;
+        return (
+          <button
+            key={index}
+            type="button"
+            onClick={() => onSelect?.(index)}
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 4,
+              border: isSelected ? `2px solid ${accent}` : '2px solid transparent',
+              borderRadius: 8,
+              background: isSelected ? `${accent}14` : 'transparent',
+              boxShadow: isSelected ? '0 4px 14px rgba(0,0,0,0.12)' : 'none',
+              transform: isSelected ? 'translateY(-2px)' : 'none',
+              transition: 'all 0.18s ease',
+              cursor: 'pointer',
+              padding: 2,
+            }}
+          >
+            <div
+              style={{
+                width: '100%',
+                background: '#e8e3dd',
+                borderRadius: 4,
+                height: 70,
+                display: 'flex',
+                alignItems: 'flex-end',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: '100%',
+                  background: statusColor(item.status),
+                  borderRadius: 4,
+                  height: `${fillHeight}%`,
+                  opacity: isSelected ? 1 : item.current ? 0.9 : 0.65,
+                }}
+              />
+            </div>
+            <span
+              style={{
+                fontSize: isSelected ? 11 : 10,
+                color: isSelected ? accent : '#6b6560',
+                fontWeight: isSelected ? 700 : 500,
+              }}
+            >
+              {item.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
