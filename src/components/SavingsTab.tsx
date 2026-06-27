@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SavingsFund, SavingsSnapshot, ThemePalette } from '../types';
+import { blueMid, fetchDolarHoyRates, type DollarRates } from '../lib/dolarRates';
 import { fmt } from '../utils';
-import { Icon, SkeletonCard } from './ui';
+import { Icon, SkeletonCard, Spinner } from './ui';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -61,6 +62,33 @@ export function SavingsTab({
   const previewPct = updatingFund && updatingFund.entries.length > 0
     ? pct(updatingFund.entries[updatingFund.entries.length - 1].amount, parseAmount(newAmount))
     : null;
+
+  // Cotizaciones
+  const [rates, setRates] = useState<DollarRates | null>(null);
+  const [ratesLoading, setRatesLoading] = useState(true);
+  const [ratesError, setRatesError] = useState('');
+
+  const loadRates = async () => {
+    setRatesLoading(true);
+    setRatesError('');
+    try {
+      setRates(await fetchDolarHoyRates());
+    } catch (e) {
+      setRatesError(e instanceof Error ? e.message : 'Error al cargar cotizaciones.');
+    } finally {
+      setRatesLoading(false);
+    }
+  };
+
+  useEffect(() => { void loadRates(); }, []);
+
+  // Totales por moneda (último saldo de cada fondo)
+  const totalARS = savingsData.funds
+    .filter(f => f.currency === 'ARS')
+    .reduce((sum, f) => sum + (f.entries[f.entries.length - 1]?.amount ?? 0), 0);
+  const totalUSD = savingsData.funds
+    .filter(f => f.currency === 'USD')
+    .reduce((sum, f) => sum + (f.entries[f.entries.length - 1]?.amount ?? 0), 0);
 
   // Modal: editar entrada del historial
   const [editingEntry, setEditingEntry] = useState<{ fundId: string; entryIndex: number; date: string; amount: string } | null>(null);
@@ -172,6 +200,64 @@ export function SavingsTab({
           <Icon name="plus" size={14} color="#fff" /> Nuevo fondo
         </button>
       </div>
+
+      {/* Header de totales */}
+      {!loading && (totalARS > 0 || totalUSD > 0) && (
+        <div style={{ background: accent, borderRadius: radius, padding: '16px 18px', marginBottom: 16, color: '#fff' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            {/* Columna ARS */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.8, opacity: 0.75, marginBottom: 4 }}>TOTAL ARS</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{fmt(totalARS, 'ARS')}</div>
+              {rates && (
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <div style={{ fontSize: 11, opacity: 0.85 }}>
+                    = {fmt(totalARS / rates.official.venta, 'USD')} <span style={{ opacity: 0.7 }}>of. venta</span>
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.85 }}>
+                    = {fmt(totalARS / blueMid(rates.blue), 'USD')} <span style={{ opacity: 0.7 }}>blue int.</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ width: 1, background: 'rgba(255,255,255,0.25)', alignSelf: 'stretch' }} />
+
+            {/* Columna USD */}
+            <div style={{ flex: 1, textAlign: 'right' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.8, opacity: 0.75, marginBottom: 4 }}>TOTAL USD</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{fmt(totalUSD, 'USD')}</div>
+              {rates && (
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end' }}>
+                  <div style={{ fontSize: 11, opacity: 0.85 }}>
+                    = {fmt(totalUSD * rates.official.compra, 'ARS')} <span style={{ opacity: 0.7 }}>of. compra</span>
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.85 }}>
+                    = {fmt(totalUSD * blueMid(rates.blue), 'ARS')} <span style={{ opacity: 0.7 }}>blue int.</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Estado cotizaciones */}
+          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {ratesLoading && <><Spinner color="rgba(255,255,255,0.7)" /><span style={{ fontSize: 11, opacity: 0.7 }}>Cargando cotizaciones…</span></>}
+            {!ratesLoading && ratesError && (
+              <>
+                <span style={{ fontSize: 11, opacity: 0.75 }}>Sin cotización.</span>
+                <button onClick={loadRates} style={{ fontSize: 11, color: '#fff', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}>Reintentar</button>
+              </>
+            )}
+            {!ratesLoading && rates && (
+              <div style={{ fontSize: 10, opacity: 0.6, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span>Blue: compra {fmt(rates.blue.compra, 'ARS')} · venta {fmt(rates.blue.venta, 'ARS')}</span>
+                <span>Oficial: compra {fmt(rates.official.compra, 'ARS')} · venta {fmt(rates.official.venta, 'ARS')}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {loading && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
