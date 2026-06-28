@@ -40,6 +40,7 @@ export interface Transaction {
   desc: string;
   date: string;
   createdAt?: string;
+  extraordinary?: boolean;
 }
 
 export interface Category {

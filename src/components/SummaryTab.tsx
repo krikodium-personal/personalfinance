@@ -50,6 +50,7 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
   });
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(now.getMonth());
   const [expandedCategoryKeys, setExpandedCategoryKeys] = useState<Record<string, boolean>>({});
+  const [distView, setDistView] = useState<'ordinary' | 'extraordinary'>('ordinary');
   const selectedMonthData = monthlyData[selectedMonthIndex] || monthlyData[monthlyData.length - 1];
   const availableYears = useMemo(() => {
     const yearSet = new Set<number>();
@@ -88,6 +89,9 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
     transactions.forEach(tx => {
       const d = parseTxDate(tx.date);
       if (d.getFullYear() !== effectiveAnnualYear) return;
+      const isExt = tx.extraordinary ?? false;
+      if (distView === 'ordinary' && isExt) return;
+      if (distView === 'extraordinary' && !isExt) return;
       const key = (tx.category && tx.category.trim()) || '__none__';
       if (!byCat.has(key)) {
         const look = resolveCategoryLook(key === '__none__' ? '' : key);
@@ -113,15 +117,19 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
     return Array.from(byCat.values())
       .filter(item => item.incomeArs + item.expenseArs + item.incomeUsd + item.expenseUsd > 0)
       .sort((a, b) => (b.incomeArs + b.expenseArs + b.incomeUsd + b.expenseUsd) - (a.incomeArs + a.expenseArs + a.incomeUsd + a.expenseUsd));
-  }, [effectiveAnnualYear, transactions]);
+  }, [distView, effectiveAnnualYear, transactions]);
 
   const distributionByCategory = useMemo(() => {
     const month = selectedMonthData.month;
     const year = selectedMonthData.year;
 
+    const matchesDist = (tx: Transaction) =>
+      distView === 'extraordinary' ? (tx.extraordinary ?? false) : !(tx.extraordinary ?? false);
+
     const curMonthExpense = transactions.filter(tx => {
       const d = parseTxDate(tx.date);
       if (tx.type !== 'expense' || tx.currency === 'USD') return false;
+      if (!matchesDist(tx)) return false;
       return periodView === 'annual'
         ? d.getFullYear() === effectiveAnnualYear
         : d.getMonth() === month && d.getFullYear() === year;
@@ -130,6 +138,7 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
     const curMonthExpenseUsd = transactions.filter(tx => {
       const d = parseTxDate(tx.date);
       if (tx.type !== 'expense' || tx.currency !== 'USD') return false;
+      if (!matchesDist(tx)) return false;
       return periodView === 'annual'
         ? d.getFullYear() === effectiveAnnualYear
         : d.getMonth() === month && d.getFullYear() === year;
@@ -138,6 +147,7 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
     const curMonthIncomeArs = transactions.filter(tx => {
       const d = parseTxDate(tx.date);
       if (tx.type !== 'income' || tx.currency === 'USD') return false;
+      if (!matchesDist(tx)) return false;
       return periodView === 'annual'
         ? d.getFullYear() === effectiveAnnualYear
         : d.getMonth() === month && d.getFullYear() === year;
@@ -146,6 +156,7 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
     const curMonthIncomeUsd = transactions.filter(tx => {
       const d = parseTxDate(tx.date);
       if (tx.type !== 'income' || tx.currency !== 'USD') return false;
+      if (!matchesDist(tx)) return false;
       return periodView === 'annual'
         ? d.getFullYear() === effectiveAnnualYear
         : d.getMonth() === month && d.getFullYear() === year;
@@ -194,7 +205,7 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
       incomeArs: build(curMonthIncomeArs),
       incomeUsd: build(curMonthIncomeUsd),
     };
-  }, [categories, effectiveAnnualYear, periodView, selectedMonthData.month, selectedMonthData.year, transactions]);
+  }, [categories, distView, effectiveAnnualYear, periodView, selectedMonthData.month, selectedMonthData.year, transactions]);
 
   const {
     expense: byCatExpense,
@@ -324,10 +335,36 @@ export function SummaryTab({ transactions, categories, t, accent, radius }: Summ
           </div>
         )}
       </div>
-      <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 12 }}>
-        {periodView === 'monthly'
-          ? `DISTRIBUCIÓN ${selectedMonthData.label.toUpperCase()} ${selectedMonthData.year}`
-          : `DISTRIBUCIÓN ANUAL ${effectiveAnnualYear}`}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>
+          {periodView === 'monthly'
+            ? `DISTRIBUCIÓN ${selectedMonthData.label.toUpperCase()} ${selectedMonthData.year}`
+            : `DISTRIBUCIÓN ANUAL ${effectiveAnnualYear}`}
+        </div>
+        <div style={{ display: 'flex', background: t.inputBg, borderRadius: 999, padding: 3, gap: 2 }}>
+          <button
+            onClick={() => setDistView('ordinary')}
+            style={{
+              border: 'none', cursor: 'pointer', borderRadius: 999,
+              padding: '5px 10px', fontSize: 11, fontWeight: 600,
+              background: distView === 'ordinary' ? accent : 'transparent',
+              color: distView === 'ordinary' ? '#fff' : t.textSecondary,
+            }}
+          >
+            Ordinarios
+          </button>
+          <button
+            onClick={() => setDistView('extraordinary')}
+            style={{
+              border: 'none', cursor: 'pointer', borderRadius: 999,
+              padding: '5px 10px', fontSize: 11, fontWeight: 600,
+              background: distView === 'extraordinary' ? accent : 'transparent',
+              color: distView === 'extraordinary' ? '#fff' : t.textSecondary,
+            }}
+          >
+            Extraordinarios
+          </button>
+        </div>
       </div>
       {periodView === 'monthly' ? (
         <>

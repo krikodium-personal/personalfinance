@@ -43,6 +43,7 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
   const currentYear = now.getFullYear();
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [balanceView, setBalanceView] = useState<'monthly' | 'annual'>('monthly');
+  const [listView, setListView] = useState<'standard' | 'extraordinary'>('standard');
   const [selectedDollarSale, setSelectedDollarSale] = useState<DisplayItem | null>(null);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(null);
   const [pendingDeleteLabel, setPendingDeleteLabel] = useState('');
@@ -64,27 +65,45 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
     return d.getMonth() === filterMonth && d.getFullYear() === filterYear;
   });
 
-  const arsIncomeMonth = filtered.filter(tx => tx.type === 'income' && tx.currency !== 'USD').reduce((s, tx) => s + tx.amount, 0);
-  const arsExpenseMonth = filtered.filter(tx => tx.type === 'expense' && tx.currency !== 'USD').reduce((s, tx) => s + tx.amount, 0);
-  const usdIncomeMonth = filtered.filter(tx => tx.type === 'income' && tx.currency === 'USD').reduce((s, tx) => s + tx.amount, 0);
-  const usdExpenseMonth = filtered.filter(tx => tx.type === 'expense' && tx.currency === 'USD').reduce((s, tx) => s + tx.amount, 0);
-  const yearly = transactions.filter(tx => parseTxDate(tx.date).getFullYear() === filterYear);
-  const arsIncomeYear = yearly.filter(tx => tx.type === 'income' && tx.currency !== 'USD').reduce((s, tx) => s + tx.amount, 0);
-  const arsExpenseYear = yearly.filter(tx => tx.type === 'expense' && tx.currency !== 'USD').reduce((s, tx) => s + tx.amount, 0);
-  const usdIncomeYear = yearly.filter(tx => tx.type === 'income' && tx.currency === 'USD').reduce((s, tx) => s + tx.amount, 0);
-  const usdExpenseYear = yearly.filter(tx => tx.type === 'expense' && tx.currency === 'USD').reduce((s, tx) => s + tx.amount, 0);
+  const calcBalance = (txList: Transaction[]) => ({
+    arsIncome: txList.filter(tx => tx.type === 'income' && tx.currency !== 'USD').reduce((s, tx) => s + tx.amount, 0),
+    arsExpense: txList.filter(tx => tx.type === 'expense' && tx.currency !== 'USD').reduce((s, tx) => s + tx.amount, 0),
+    usdIncome: txList.filter(tx => tx.type === 'income' && tx.currency === 'USD').reduce((s, tx) => s + tx.amount, 0),
+    usdExpense: txList.filter(tx => tx.type === 'expense' && tx.currency === 'USD').reduce((s, tx) => s + tx.amount, 0),
+  });
 
-  const arsIncome = balanceView === 'monthly' ? arsIncomeMonth : arsIncomeYear;
-  const arsExpense = balanceView === 'monthly' ? arsExpenseMonth : arsExpenseYear;
-  const usdIncome = balanceView === 'monthly' ? usdIncomeMonth : usdIncomeYear;
-  const usdExpense = balanceView === 'monthly' ? usdExpenseMonth : usdExpenseYear;
+  const filteredStd = filtered.filter(tx => !tx.extraordinary);
+  const filteredExt = filtered.filter(tx => tx.extraordinary);
+
+  const yearly = transactions.filter(tx => parseTxDate(tx.date).getFullYear() === filterYear);
+  const yearlyStd = yearly.filter(tx => !tx.extraordinary);
+  const yearlyExt = yearly.filter(tx => tx.extraordinary);
+
+  const stdMonth = calcBalance(filteredStd);
+  const extMonth = calcBalance(filteredExt);
+  const stdYear = calcBalance(yearlyStd);
+  const extYear = calcBalance(yearlyExt);
+
+  const std = balanceView === 'monthly' ? stdMonth : stdYear;
+  const ext = balanceView === 'monthly' ? extMonth : extYear;
+
+  const arsIncome = std.arsIncome;
+  const arsExpense = std.arsExpense;
+  const usdIncome = std.usdIncome;
+  const usdExpense = std.usdExpense;
   const arsNet = arsIncome - arsExpense;
   const usdNet = usdIncome - usdExpense;
+
+  const hasExtraordinary = ext.arsIncome + ext.arsExpense + ext.usdIncome + ext.usdExpense > 0;
+
   const balanceLabel = balanceView === 'monthly' ? 'BALANCE DEL MES' : `BALANCE ANUAL ${filterYear}`;
 
-  const sorted = [...filtered].sort(
+  const sortedAll = [...filtered].sort(
     (a, b) =>
       new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime(),
+  );
+  const sorted = sortedAll.filter(tx =>
+    listView === 'extraordinary' ? tx.extraordinary : !tx.extraordinary,
   );
 
   const displayItems: DisplayItem[] = [];
@@ -243,41 +262,122 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
           </div>
         </div>
         <div style={{ padding: 16 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: t.textSecondary, letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' }}>
+            Ordinarios
+          </div>
           <div style={{ display: 'flex', gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: t.textSecondary }}>
-              <span style={{ color: '#16a34a', fontWeight: 700 }}>↑</span> ARS Ingresos
+            <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+              <div style={{ fontSize: 11, color: t.textSecondary }}>
+                <span style={{ color: '#16a34a', fontWeight: 700 }}>↑</span> ARS Ingresos
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(arsIncome, 'ARS')}</div>
             </div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(arsIncome, 'ARS')}</div>
-          </div>
-          <div style={{ width: 1, background: t.border }} />
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: t.textSecondary }}>
-              <span style={{ color: '#dc2626', fontWeight: 700 }}>↓</span> ARS Gastos
+            <div style={{ width: 1, background: t.border }} />
+            <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+              <div style={{ fontSize: 11, color: t.textSecondary }}>
+                <span style={{ color: '#dc2626', fontWeight: 700 }}>↓</span> ARS Gastos
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(arsExpense, 'ARS')}</div>
             </div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(arsExpense, 'ARS')}</div>
           </div>
-        </div>
           <div style={{ height: 1, background: t.border, margin: '12px 0' }} />
           <div style={{ display: 'flex', gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: t.textSecondary }}>
-              <span style={{ color: '#16a34a', fontWeight: 700 }}>↑</span> USD Ingresos
+            <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+              <div style={{ fontSize: 11, color: t.textSecondary }}>
+                <span style={{ color: '#16a34a', fontWeight: 700 }}>↑</span> USD Ingresos
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(usdIncome, 'USD')}</div>
             </div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(usdIncome, 'USD')}</div>
-          </div>
-          <div style={{ width: 1, background: t.border }} />
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: t.textSecondary }}>
-              <span style={{ color: '#dc2626', fontWeight: 700 }}>↓</span> USD Gastos
+            <div style={{ width: 1, background: t.border }} />
+            <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+              <div style={{ fontSize: 11, color: t.textSecondary }}>
+                <span style={{ color: '#dc2626', fontWeight: 700 }}>↓</span> USD Gastos
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(usdExpense, 'USD')}</div>
             </div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(usdExpense, 'USD')}</div>
           </div>
-        </div>
+
+          {hasExtraordinary && (
+            <>
+              <div style={{ height: 1, background: t.border, margin: '12px 0' }} />
+              <div style={{ fontSize: 10, fontWeight: 600, color: t.textSecondary, letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' }}>
+                Extraordinario
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, color: t.textSecondary }}>
+                    <span style={{ color: '#16a34a', fontWeight: 700 }}>↑</span> ARS Ingresos
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(ext.arsIncome, 'ARS')}</div>
+                </div>
+                <div style={{ width: 1, background: t.border }} />
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, color: t.textSecondary }}>
+                    <span style={{ color: '#dc2626', fontWeight: 700 }}>↓</span> ARS Gastos
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(ext.arsExpense, 'ARS')}</div>
+                </div>
+              </div>
+              {(ext.usdIncome > 0 || ext.usdExpense > 0) && (
+                <>
+                  <div style={{ height: 1, background: t.border, margin: '12px 0' }} />
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+                      <div style={{ fontSize: 11, color: t.textSecondary }}>
+                        <span style={{ color: '#16a34a', fontWeight: 700 }}>↑</span> USD Ingresos
+                      </div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(ext.usdIncome, 'USD')}</div>
+                    </div>
+                    <div style={{ width: 1, background: t.border }} />
+                    <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+                      <div style={{ fontSize: 11, color: t.textSecondary }}>
+                        <span style={{ color: '#dc2626', fontWeight: 700 }}>↓</span> USD Gastos
+                      </div>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: t.text, whiteSpace: 'nowrap' }}>{fmt(ext.usdExpense, 'USD')}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
 
-      <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, marginBottom: 12, marginTop: 4 }}>MOVIMIENTOS</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, marginTop: 4 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>MOVIMIENTOS</div>
+        <div style={{ display: 'flex', background: t.inputBg, borderRadius: 999, padding: 3, gap: 2 }}>
+          <button
+            onClick={() => setListView('standard')}
+            style={{
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: 999,
+              padding: '5px 12px',
+              fontSize: 11,
+              fontWeight: 600,
+              background: listView === 'standard' ? accent : 'transparent',
+              color: listView === 'standard' ? '#fff' : t.textSecondary,
+            }}
+          >
+            Ordinarios
+          </button>
+          <button
+            onClick={() => setListView('extraordinary')}
+            style={{
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: 999,
+              padding: '5px 12px',
+              fontSize: 11,
+              fontWeight: 600,
+              background: listView === 'extraordinary' ? accent : 'transparent',
+              color: listView === 'extraordinary' ? '#fff' : t.textSecondary,
+            }}
+          >
+            Extraordinario
+          </button>
+        </div>
+      </div>
 
       {loading && (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
@@ -286,7 +386,9 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
       )}
 
       {!loading && displayItems.length === 0 && (
-        <div style={{ textAlign: 'center', color: t.textSecondary, padding: '40px 0', fontSize: 14 }}>No hay movimientos este mes</div>
+        <div style={{ textAlign: 'center', color: t.textSecondary, padding: '40px 0', fontSize: 14 }}>
+          {listView === 'extraordinary' ? 'No hay movimientos extraordinarios este mes' : 'No hay movimientos ordinarios este mes'}
+        </div>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

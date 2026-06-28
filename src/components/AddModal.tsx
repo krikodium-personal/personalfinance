@@ -88,6 +88,7 @@ export function AddModal({
   const [date, setDate] = useState(
     initialTransaction ? txDateToInputValue(initialTransaction.date) : (defaultDate || todayForInput()),
   );
+  const [extraordinary, setExtraordinary] = useState(initialTransaction?.extraordinary ?? false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -297,6 +298,7 @@ export function AddModal({
       currency,
       desc: composedDescription,
       date: toStoredIsoDate(date),
+      extraordinary,
     });
     setSaving(false);
     if (!result.ok) {
@@ -654,6 +656,46 @@ export function AddModal({
               </select>
             </div>
           </>
+        )}
+
+        {(entryMode === 'expense' || entryMode === 'income') && (
+          <div style={{ marginBottom: 14 }}>
+            <button
+              type="button"
+              onClick={() => setExtraordinary(v => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                background: extraordinary ? `${accent}14` : t.inputBg,
+                border: `1.5px solid ${extraordinary ? accent : t.border}`,
+                borderRadius: radius * 0.6,
+                padding: '11px 14px',
+                cursor: 'pointer',
+                width: '100%',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{
+                width: 20, height: 20, borderRadius: 6,
+                border: `2px solid ${extraordinary ? accent : t.border}`,
+                background: extraordinary ? accent : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+                transition: 'all 0.15s',
+              }}>
+                {extraordinary && (
+                  <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                    <path d="M1 4.5L4 7.5L10 1.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>Extraordinario</div>
+                <div style={{ fontSize: 11, color: t.textSecondary, marginTop: 1 }}>Gasto o ingreso fuera de lo habitual</div>
+              </div>
+            </button>
+          </div>
         )}
 
         <div style={{ marginBottom: 14 }}>

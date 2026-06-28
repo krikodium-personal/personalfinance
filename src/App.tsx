@@ -56,6 +56,7 @@ const rowToTx = (r: {
   description: string;
   date: string;
   created_at?: string;
+  extraordinary?: boolean;
 }): Transaction => ({
   id: r.id,
   type: r.type,
@@ -65,6 +66,7 @@ const rowToTx = (r: {
   desc: r.description,
   date: r.date,
   createdAt: r.created_at,
+  extraordinary: r.extraordinary ?? false,
 });
 
 const normalizeCategories = (items: unknown): Category[] => {
@@ -369,6 +371,7 @@ export default function App() {
           description: tx.desc,
           date: tx.date,
           user_id: user.id,
+          extraordinary: tx.extraordinary ?? false,
         },
       ]);
 
@@ -471,6 +474,7 @@ export default function App() {
         currency: tx.currency,
         description: tx.desc,
         date: tx.date,
+        extraordinary: tx.extraordinary ?? false,
       })
       .eq('id', id)
       .eq('user_id', user.id);
