@@ -240,6 +240,40 @@ export function SavingsTab({
             </div>
           </div>
 
+          {/* Totales combinados */}
+          {rates && (totalARS > 0 || totalUSD > 0) && (
+            <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.8, opacity: 0.6, marginBottom: 6, textTransform: 'uppercase' }}>
+                Total combinado
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, opacity: 0.65, marginBottom: 2 }}>En pesos</div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>
+                    {fmt(totalARS + totalUSD * blueMid(rates.blue), 'ARS')}
+                  </div>
+                  <div style={{ fontSize: 10, opacity: 0.65, marginTop: 1 }}>blue int.</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, marginTop: 3 }}>
+                    {fmt(totalARS + totalUSD * rates.official.compra, 'ARS')}
+                  </div>
+                  <div style={{ fontSize: 10, opacity: 0.65, marginTop: 1 }}>of. compra</div>
+                </div>
+                <div style={{ width: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'stretch' }} />
+                <div style={{ flex: 1, textAlign: 'right' }}>
+                  <div style={{ fontSize: 10, opacity: 0.65, marginBottom: 2 }}>En dólares</div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>
+                    {fmt(totalUSD + totalARS / blueMid(rates.blue), 'USD')}
+                  </div>
+                  <div style={{ fontSize: 10, opacity: 0.65, marginTop: 1 }}>blue int.</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, marginTop: 3 }}>
+                    {fmt(totalUSD + totalARS / rates.official.venta, 'USD')}
+                  </div>
+                  <div style={{ fontSize: 10, opacity: 0.65, marginTop: 1 }}>of. venta</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Estado cotizaciones */}
           <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', gap: 6 }}>
             {ratesLoading && <><Spinner color="rgba(255,255,255,0.7)" /><span style={{ fontSize: 11, opacity: 0.7 }}>Cargando cotizaciones…</span></>}
