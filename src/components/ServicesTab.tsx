@@ -480,10 +480,9 @@ export function ServicesTab({
         <div
           style={{
             background: t.card,
-            borderRadius: radius * 0.75,
-            padding: '12px 8px',
-            marginBottom: 14,
-            border: `1px solid ${t.border}`,
+            borderRadius: radius,
+            padding: 20,
+            marginBottom: 16,
           }}
         >
           <ServicesMonthBarChart
