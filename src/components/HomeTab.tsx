@@ -44,6 +44,8 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
   const [filterMonth, setFilterMonth] = useState(now.getMonth());
   const [balanceView, setBalanceView] = useState<'monthly' | 'annual'>('monthly');
   const [listView, setListView] = useState<'standard' | 'extraordinary'>('standard');
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const [selectedDollarSale, setSelectedDollarSale] = useState<DisplayItem | null>(null);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(null);
   const [pendingDeleteLabel, setPendingDeleteLabel] = useState('');
@@ -103,8 +105,14 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
     (a, b) =>
       new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime(),
   );
-  const sorted = sortedAll.filter(tx =>
-    listView === 'extraordinary' ? tx.extraordinary : !tx.extraordinary,
+  const sorted = sortedAll.filter(tx => {
+    const matchesView = listView === 'extraordinary' ? tx.extraordinary : !tx.extraordinary;
+    const matchesCategory = !categoryFilter || tx.category === categoryFilter;
+    return matchesView && matchesCategory;
+  });
+
+  const categoriesInList = categories.filter(c =>
+    sortedAll.some(tx => tx.category === c.id),
   );
 
   const displayItems: DisplayItem[] = [];
@@ -344,39 +352,101 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, marginTop: 4 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>MOVIMIENTOS</div>
-        <div style={{ display: 'flex', background: t.inputBg, borderRadius: 999, padding: 3, gap: 2 }}>
-          <button
-            onClick={() => setListView('standard')}
-            style={{
-              border: 'none',
-              cursor: 'pointer',
-              borderRadius: 999,
-              padding: '5px 12px',
-              fontSize: 11,
-              fontWeight: 600,
-              background: listView === 'standard' ? accent : 'transparent',
-              color: listView === 'standard' ? '#fff' : t.textSecondary,
-            }}
-          >
-            Ordinarios
-          </button>
-          <button
-            onClick={() => setListView('extraordinary')}
-            style={{
-              border: 'none',
-              cursor: 'pointer',
-              borderRadius: 999,
-              padding: '5px 12px',
-              fontSize: 11,
-              fontWeight: 600,
-              background: listView === 'extraordinary' ? accent : 'transparent',
-              color: listView === 'extraordinary' ? '#fff' : t.textSecondary,
-            }}
-          >
-            Extraordinario
-          </button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, marginTop: 4, gap: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary, flexShrink: 0 }}>MOVIMIENTOS</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <div style={{ display: 'flex', background: t.inputBg, borderRadius: 999, padding: 3, gap: 2, flexShrink: 0 }}>
+            <button
+              onClick={() => setListView('standard')}
+              style={{
+                border: 'none',
+                cursor: 'pointer',
+                borderRadius: 999,
+                padding: '5px 12px',
+                fontSize: 11,
+                fontWeight: 600,
+                background: listView === 'standard' ? accent : 'transparent',
+                color: listView === 'standard' ? '#fff' : t.textSecondary,
+              }}
+            >
+              Ordinarios
+            </button>
+            <button
+              onClick={() => setListView('extraordinary')}
+              style={{
+                border: 'none',
+                cursor: 'pointer',
+                borderRadius: 999,
+                padding: '5px 12px',
+                fontSize: 11,
+                fontWeight: 600,
+                background: listView === 'extraordinary' ? accent : 'transparent',
+                color: listView === 'extraordinary' ? '#fff' : t.textSecondary,
+              }}
+            >
+              Extraordinario
+            </button>
+          </div>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              onClick={() => setShowCategoryFilter(v => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 30,
+                height: 30,
+                border: `1.5px solid ${categoryFilter ? accent : t.border}`,
+                borderRadius: '50%',
+                background: categoryFilter ? `${accent}18` : t.inputBg,
+                cursor: 'pointer',
+                position: 'relative',
+              }}
+            >
+              <Icon name="filter" size={14} color={categoryFilter ? accent : t.textSecondary} />
+              {categoryFilter && (
+                <span style={{
+                  position: 'absolute', top: -2, right: -2, width: 8, height: 8,
+                  borderRadius: '50%', background: accent, border: `1.5px solid ${t.card}`,
+                }} />
+              )}
+            </button>
+            {showCategoryFilter && (
+              <>
+                <div onClick={() => setShowCategoryFilter(false)} style={{ position: 'fixed', inset: 0, zIndex: 90 }} />
+                <div style={{
+                  position: 'absolute', top: 36, right: 0, zIndex: 91,
+                  background: t.card, borderRadius: radius * 0.6, boxShadow: t.shadow,
+                  border: `1px solid ${t.border}`, padding: 6, minWidth: 180,
+                  maxHeight: 280, overflowY: 'auto',
+                }}>
+                  <button
+                    onClick={() => { setCategoryFilter(null); setShowCategoryFilter(false); }}
+                    style={{
+                      width: '100%', textAlign: 'left', border: 'none', background: !categoryFilter ? `${accent}14` : 'transparent',
+                      color: !categoryFilter ? accent : t.text, borderRadius: 8, padding: '8px 10px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    Todas las categorías
+                  </button>
+                  {categoriesInList.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => { setCategoryFilter(c.id); setShowCategoryFilter(false); }}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left', border: 'none',
+                        background: categoryFilter === c.id ? `${accent}14` : 'transparent',
+                        color: categoryFilter === c.id ? accent : t.text, borderRadius: 8, padding: '8px 10px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                      }}
+                    >
+                      <span>{c.icon}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -388,7 +458,11 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
 
       {!loading && displayItems.length === 0 && (
         <div style={{ textAlign: 'center', color: t.textSecondary, padding: '40px 0', fontSize: 14 }}>
-          {listView === 'extraordinary' ? 'No hay movimientos extraordinarios este mes' : 'No hay movimientos ordinarios este mes'}
+          {categoryFilter
+            ? 'No hay movimientos con esa categoría este mes'
+            : listView === 'extraordinary'
+              ? 'No hay movimientos extraordinarios este mes'
+              : 'No hay movimientos ordinarios este mes'}
         </div>
       )}
 
