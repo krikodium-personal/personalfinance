@@ -91,8 +91,9 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
   const arsExpense = std.arsExpense;
   const usdIncome = std.usdIncome;
   const usdExpense = std.usdExpense;
-  const arsNet = arsIncome - arsExpense;
-  const usdNet = usdIncome - usdExpense;
+
+  const arsNet = (std.arsIncome + ext.arsIncome) - (std.arsExpense + ext.arsExpense);
+  const usdNet = (std.usdIncome + ext.usdIncome) - (std.usdExpense + ext.usdExpense);
 
   const hasExtraordinary = ext.arsIncome + ext.arsExpense + ext.usdIncome + ext.usdExpense > 0;
 
