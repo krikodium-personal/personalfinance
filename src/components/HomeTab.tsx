@@ -420,15 +420,6 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
                   border: `1px solid ${t.border}`, padding: 6, minWidth: 180,
                   maxHeight: 280, overflowY: 'auto',
                 }}>
-                  <button
-                    onClick={() => { setCategoryFilter(null); setShowCategoryFilter(false); }}
-                    style={{
-                      width: '100%', textAlign: 'left', border: 'none', background: !categoryFilter ? `${accent}14` : 'transparent',
-                      color: !categoryFilter ? accent : t.text, borderRadius: 8, padding: '8px 10px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                    }}
-                  >
-                    Todas las categorías
-                  </button>
                   {categoriesInList.map(c => (
                     <button
                       key={c.id}
@@ -443,6 +434,16 @@ export function HomeTab({ transactions, categories, loading, t, accent, radius, 
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
                     </button>
                   ))}
+                  <button
+                    onClick={() => { setCategoryFilter(null); setShowCategoryFilter(false); }}
+                    style={{
+                      width: '100%', textAlign: 'center', border: 'none', background: 'transparent',
+                      color: accent, borderRadius: 8, padding: '8px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      marginTop: 4, borderTop: `1px solid ${t.border}`, paddingTop: 10,
+                    }}
+                  >
+                    Limpiar filtros
+                  </button>
                 </div>
               </>
             )}
